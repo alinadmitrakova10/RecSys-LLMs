@@ -9,7 +9,7 @@ I manually opened the provided Random Lunch Generator in a browser and tested th
 
 My hypothesis is that the application references icon class names that are unavailable in the connected Font Awesome Free 6.4.0 library. Please verify this hypothesis and correct the existing starter code.
 
-## Requirements
+Requirements
 
 1. Work only with the provided `index.html`. Do not recreate or redesign the application.
 2. Inspect all entries in the existing `lunchMenu` array, not only the three items I identified.
