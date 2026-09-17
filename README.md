@@ -2,7 +2,7 @@
 Repository for Recommender Systems course in HSE : Code examples, assignments, and capstone project templates using JavaScript, Hugging Face LLM API, and GitHub Pages. From random lunch recommender to personalized AI systems.
 
 
-#My prompt
+## My prompt
 The project consists of the original prompt and the application code in `index.html`. The application is a Random Lunch Generator: when the user clicks the button, it randomly selects and displays a lunch option from the existing menu.
 
 I manually opened the provided Random Lunch Generator in a browser and tested the lunch options. I observed that the icons for **Ramen**, **Pasta**, and **Soup** did not appear, while the lunch names were still displayed.
