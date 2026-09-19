@@ -1,3 +1,7 @@
+Important: The homework was revised following the instructor’s feedback. The report and session log were updated accordingly.
+
+
+
 ## My prompt
 The project consists of the original prompt and the application code in `index.html`. The application is a Random Lunch Generator: when the user clicks the button, it randomly selects and displays a lunch option from the existing menu.
 
