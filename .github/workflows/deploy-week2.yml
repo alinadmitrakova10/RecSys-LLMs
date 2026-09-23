@@ -1,0 +1,38 @@
+name: Deploy Week 2 to GitHub Pages
+
+on:
+  push:
+    branches:
+      - alina-02-recom
+    paths:
+      - "week2/**"
+      - ".github/workflows/deploy-week2.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Week 2
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./week2
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
