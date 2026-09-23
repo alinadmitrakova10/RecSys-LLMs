@@ -1,4 +1,5 @@
 name: Deploy Week 2 to GitHub Pages
+# Publishes the contents of week2 as the project site.
 
 on:
   push:
