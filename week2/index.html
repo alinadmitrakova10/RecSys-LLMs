@@ -12,14 +12,38 @@
         <p>Select a movie you like, and we'll find similar ones for you!</p>
         
         <div class="controls">
-            <select id="movie-select">
-                <option value="" disabled selected>Select a movie</option>
-            </select>
+            <div class="select-group">
+                <label for="movie-select">Main Movie</label>
+                <div class="combobox" id="combobox-1">
+                    <input type="text" class="combobox-input" id="movie-select-input" placeholder="Type to search..." autocomplete="off" />
+                    <button type="button" class="combobox-clear" aria-label="Clear selection" hidden>×</button>
+                    <div class="combobox-dropdown" role="listbox" hidden></div>
+                    <input type="hidden" id="movie-select" name="movie-select" />
+                </div>
+            </div>
+            <div class="select-group">
+                <label for="movie-select-2">Additional Movie 1 (optional)</label>
+                <div class="combobox" id="combobox-2">
+                    <input type="text" class="combobox-input" id="movie-select-2-input" placeholder="Type to search..." autocomplete="off" />
+                    <button type="button" class="combobox-clear" aria-label="Clear selection" hidden>×</button>
+                    <div class="combobox-dropdown" role="listbox" hidden></div>
+                    <input type="hidden" id="movie-select-2" name="movie-select-2" />
+                </div>
+            </div>
+            <div class="select-group">
+                <label for="movie-select-3">Additional Movie 2 (optional)</label>
+                <div class="combobox" id="combobox-3">
+                    <input type="text" class="combobox-input" id="movie-select-3-input" placeholder="Type to search..." autocomplete="off" />
+                    <button type="button" class="combobox-clear" aria-label="Clear selection" hidden>×</button>
+                    <div class="combobox-dropdown" role="listbox" hidden></div>
+                    <input type="hidden" id="movie-select-3" name="movie-select-3" />
+                </div>
+            </div>
             <button id="recommend-btn" onclick="getRecommendations()">Get Recommendations</button>
         </div>
         
         <div id="result-box">
-            <p id="result">Please wait, loading data...</p>
+            <div id="result">Please wait, loading data...</div>
         </div>
     </div>
 
