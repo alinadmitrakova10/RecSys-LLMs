@@ -26,7 +26,8 @@ let sortedMovies = [];
 
 // Populate all comboboxes with sorted movie titles
 function populateComboboxes() {
-    sortedMovies = [...movies].sort((a, b) => a.title.localeCompare(b.title));
+    // Only include recommendable movies in the dropdown
+    sortedMovies = [...movies].filter(m => m.isRecommendable).sort((a, b) => a.displayTitle.localeCompare(b.displayTitle));
     
     const comboboxConfigs = [
         { id: 'movie-select', inputId: 'movie-select-input', dropdownId: 'combobox-1' },
@@ -57,7 +58,7 @@ function renderComboboxOptions(dropdown, moviesList, currentValue, disabledIds =
         const option = document.createElement('div');
         option.className = 'combobox-option';
         option.dataset.value = movie.id;
-        option.textContent = movie.title;
+        option.textContent = movie.displayTitle;
         option.setAttribute('role', 'option');
         
         if (movie.id == currentValue) {
@@ -107,7 +108,7 @@ function setupComboboxEvents() {
             const query = textInput.value.toLowerCase().trim();
             const filtered = query === '' 
                 ? sortedMovies 
-                : sortedMovies.filter(m => m.title.toLowerCase().includes(query));
+                : sortedMovies.filter(m => m.title.toLowerCase().includes(query) || m.displayTitle.toLowerCase().includes(query));
             const disabledIds = getDisabledIds(config.id);
             
             renderComboboxOptions(dropdown, filtered, hiddenInput.value, disabledIds);
@@ -122,7 +123,7 @@ function setupComboboxEvents() {
             const query = textInput.value.toLowerCase().trim();
             const filtered = query === '' 
                 ? sortedMovies 
-                : sortedMovies.filter(m => m.title.toLowerCase().includes(query));
+                : sortedMovies.filter(m => m.title.toLowerCase().includes(query) || m.displayTitle.toLowerCase().includes(query));
             const disabledIds = getDisabledIds(config.id);
             
             renderComboboxOptions(dropdown, filtered, hiddenInput.value, disabledIds);
@@ -266,7 +267,7 @@ function updateComboboxAvailability() {
             const query = textInput.value.toLowerCase().trim();
             const filtered = query === '' 
                 ? sortedMovies 
-                : sortedMovies.filter(m => m.title.toLowerCase().includes(query));
+                : sortedMovies.filter(m => m.title.toLowerCase().includes(query) || m.displayTitle.toLowerCase().includes(query));
             const disabledIds = getDisabledIds(config.id);
             renderComboboxOptions(dropdown, filtered, currentVal, disabledIds);
         }
@@ -311,7 +312,7 @@ function renderRecList(recommendations, titlePrefix) {
         const genresStr = movie.genres.join(', ') || '(no genres)';
         return `<div class="rec-item">
             <span class="rec-rank">${idx + 1}.</span>
-            <span class="rec-title">${movie.title}</span>
+            <span class="rec-title">${movie.displayTitle}</span>
             <span class="rec-score">score: ${movie.score.toFixed(4)}</span>
             <span class="rec-genres">${genresStr}</span>
             <span class="rec-ratings">${movie.ratingCount} ratings</span>
@@ -359,14 +360,14 @@ function getRecommendations() {
             try {
                 // ITEM-TO-ITEM RECOMMENDATIONS (always calculated)
                 const likedVector = mainMovie.genreVector;
-                const candidateMovies = movies.filter(movie => movie.id !== mainMovieId);
+                const candidateMovies = movies.filter(movie => movie.id !== mainMovieId && movie.isRecommendable);
                 
                 const scoredMovies = candidateMovies.map(candidate => {
                     const score = cosineSimilarity(likedVector, candidate.genreVector);
                     return { ...candidate, score: score };
                 });
                 
-                scoredMovies.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+                scoredMovies.sort((a, b) => b.score - a.score || a.displayTitle.localeCompare(b.displayTitle));
                 const itemTop5 = scoredMovies.slice(0, 5);
                 
                 const mainGenresStr = mainMovie.genres.join(', ') || '(no genres)';
@@ -374,7 +375,7 @@ function getRecommendations() {
                 
                 const itemSection = `
                     <div class="rec-header" style="margin-top: 24px; padding-top: 16px; border-top: 2px solid #2c3e50;">
-                        <div class="rec-liked-title">Item-to-item: Because you liked <strong>${mainMovie.title}</strong></div>
+                        <div class="rec-liked-title">Item-to-item: Because you liked <strong>${mainMovie.displayTitle}</strong></div>
                         <div class="rec-liked-genres">Genres: ${mainGenresStr}</div>
                     </div>
                     <div class="rec-list">${itemRecHtml}</div>
@@ -391,16 +392,16 @@ function getRecommendations() {
                         // Build profile from all 3 movies
                         const profileVector = buildUserProfile([mainMovieId, add1Id, add2Id]);
                         
-                        // Candidates: exclude all 3 selected movies
+                        // Candidates: exclude all 3 selected movies AND only recommendable
                         const excludedIds = new Set([mainMovieId, add1Id, add2Id]);
-                        const profileCandidates = movies.filter(m => !excludedIds.has(m.id));
+                        const profileCandidates = movies.filter(m => !excludedIds.has(m.id) && m.isRecommendable);
                         
                         const profileScored = profileCandidates.map(candidate => {
                             const score = cosineSimilarity(profileVector, candidate.genreVector);
                             return { ...candidate, score: score };
                         });
                         
-                        profileScored.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+                        profileScored.sort((a, b) => b.score - a.score || a.displayTitle.localeCompare(b.displayTitle));
                         const profileTop5 = profileScored.slice(0, 5);
                         
                         const profileGenres = [];
@@ -413,7 +414,7 @@ function getRecommendations() {
                         // Profile-based FIRST
                         finalHtml += `
                             <div class="rec-header">
-                                <div class="rec-liked-title">Profile-based: Your profile (${mainMovie.title}, ${add1Movie.title}, ${add2Movie.title})</div>
+                                <div class="rec-liked-title">Profile-based: Your profile (${mainMovie.displayTitle}, ${add1Movie.displayTitle}, ${add2Movie.displayTitle})</div>
                                 <div class="rec-liked-genres">Profile genre weights: ${profileGenres.join(', ')}</div>
                             </div>
                             <div class="rec-list">${profileRecHtml}</div>
@@ -437,7 +438,7 @@ function getRecommendations() {
                     // Only main movie selected - just item-to-item
                     finalHtml = `
                         <div class="rec-header">
-                            <div class="rec-liked-title">Item-to-item: Because you liked <strong>${mainMovie.title}</strong></div>
+                            <div class="rec-liked-title">Item-to-item: Because you liked <strong>${mainMovie.displayTitle}</strong></div>
                             <div class="rec-liked-genres">Genres: ${mainGenresStr}</div>
                         </div>
                         <div class="rec-list">${itemRecHtml}</div>

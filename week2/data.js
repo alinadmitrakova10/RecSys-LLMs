@@ -10,6 +10,21 @@ const genreNames = [
     "Thriller", "War", "Western"
 ];
 
+// Normalize title for display: move trailing ", The" / ", A" / ", An" / ", Le" / ", La" / ", Les" / ", El" / ", Los" / ", Das" / ", Der" / ", Die" / ", Il" / ", Lo" / ", L'" to front
+function normalizeDisplayTitle(title) {
+    // Match pattern: "Title, Article (year)" -> "Article Title (year)"
+    const match = title.match(/^(.+),\s+(The|A|An|Le|La|Les|El|Los|Das|Der|Die|Il|Lo|L')\s*\((\d{4})\)$/);
+    if (match) {
+        return `${match[2]} ${match[1]} (${match[3]})`;
+    }
+    // Also handle without year: "Title, The" -> "The Title"
+    const matchNoYear = title.match(/^(.+),\s+(The|A|An|Le|La|Les|El|Los|Das|Der|Die|Il|Lo|L')$/);
+    if (matchNoYear) {
+        return `${matchNoYear[2]} ${matchNoYear[1]}`;
+    }
+    return title;
+}
+
 // Primary function to load data from files
 async function loadData() {
     try {
@@ -55,12 +70,19 @@ function parseItemData(text) {
         
         const id = parseInt(fields[0]);
         const title = fields[1];
+        const displayTitle = normalizeDisplayTitle(title);
+        
+        // Field 5 (index 5) is the "unknown" genre flag
+        const unknownFlag = parseInt(fields[5]) === 1;
         
         // Extract genres: skip field 5 (unknown), take fields 6-23 (18 genres: Action to Western)
         const genreVector = fields.slice(6, 24).map(value => parseInt(value));
         const genres = genreNames.filter((_, index) => genreVector[index] === 1);
         
-        movies.push({ id, title, genres, genreVector });
+        // Movie is recommendable if NOT unknown and has at least one genre
+        const isRecommendable = !unknownFlag && genreVector.some(v => v === 1);
+        
+        movies.push({ id, title, displayTitle, genres, genreVector, isRecommendable });
     }
 }
 
