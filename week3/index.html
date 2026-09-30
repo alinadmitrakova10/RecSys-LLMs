@@ -3,42 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matrix Factorization Movie Recommender</title>
+    <title>Collaborative Filtering Movie Recommender</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Matrix Factorization Movie Recommender</h1>
-            <p>Train a collaborative filtering model in your browser using TensorFlow.js</p>
+            <h1>Collaborative Filtering<br>Movie Recommender</h1>
+            <p class="subtitle">Pick a user and a movie to predict a rating using<br>User-Based and Item-Based CF</p>
         </header>
-        
+
         <main>
-            <div class="controls">
+            <div class="search-row">
                 <div class="input-group">
-                    <label for="user-select">Select User:</label>
-                    <select id="user-select">
-                        <option value="">Loading users...</option>
-                    </select>
+                    <label class="field-label" for="user-input">User</label>
+                    <div class="search-wrapper">
+                        <input type="text" id="user-input" placeholder="Select User" autocomplete="off">
+                        <button type="button" id="user-clear" class="clear-btn" title="Clear selection">×</button>
+                        <div id="user-suggestions" class="suggestions-dropdown"></div>
+                    </div>
                 </div>
-                
+
                 <div class="input-group">
-                    <label for="movie-select">Select Movie:</label>
-                    <select id="movie-select">
-                        <option value="">Loading movies...</option>
-                    </select>
+                    <label class="field-label" for="movie-input">Movie</label>
+                    <div class="search-wrapper">
+                        <input type="text" id="movie-input" placeholder="Select Movie" autocomplete="off">
+                        <button type="button" id="movie-clear" class="clear-btn" title="Clear selection">×</button>
+                        <div id="movie-suggestions" class="suggestions-dropdown"></div>
+                    </div>
                 </div>
-                
+            </div>
+
+            <div class="btn-row">
                 <button id="predict-btn" onclick="predictRating()" disabled>Predict Rating</button>
             </div>
-            
-            <div id="status" class="status">Loading data and training model...</div>
+
             <div id="result" class="result"></div>
+            <div id="status" class="status">Loading data</div>
         </main>
     </div>
 
-    <!-- Load TensorFlow.js first, then our data module, then our main script -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="data.js"></script>
     <script src="script.js"></script>
 </body>
