@@ -233,9 +233,10 @@ function renderTop5List(items) {
     if (!items || items.length === 0) {
         return '<span class="no-prediction">No recommendations</span>';
     }
-    return '<ol class="top5-list">' + items.map((it, idx) =>
-        `<li><span class="top5-rank">${idx + 1}.</span><span class="top5-title">${it.title}</span><span class="top5-score">${it.prediction.toFixed(2)}</span></li>`
-    ).join('') + '</ol>';
+    return '<ol class="top5-list">' + items.map((it, idx) => {
+        const safeTitle = it.title.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        return `<li><span class="top5-rank">${idx + 1}.</span><span class="top5-title" title="${safeTitle}">${it.title}</span><span class="top5-score">${it.prediction.toFixed(2)}</span></li>`;
+    }).join('') + '</ol>';
 }
 
 function renderTop5(userTop5, itemTop5) {

@@ -183,6 +183,7 @@ header h1 {
 
 .pred {
     flex: 1;
+    min-width: 0;
     padding: 12px 10px;
 }
 
@@ -268,18 +269,21 @@ header h1 {
 
 .top5-card {
     margin-top: 10px;
+    max-width: 100%;
 }
 
 .top5-list {
     list-style: none;
     text-align: left;
     margin-top: 6px;
+    min-width: 0;
 }
 
 .top5-list li {
     display: flex;
     align-items: baseline;
     gap: 6px;
+    min-width: 0;
     font-size: 0.78rem;
     padding: 3px 0;
     border-top: 1px solid #f1f5f9;
@@ -290,12 +294,14 @@ header h1 {
 }
 
 .top5-rank {
+    flex-shrink: 0;
     color: #94a3b8;
     min-width: 14px;
 }
 
 .top5-title {
     flex: 1;
+    min-width: 0;
     color: #1e293b;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -303,6 +309,7 @@ header h1 {
 }
 
 .top5-score {
+    flex-shrink: 0;
     font-weight: 700;
     color: #17407c;
     white-space: nowrap;
