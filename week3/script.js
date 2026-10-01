@@ -84,6 +84,14 @@ function renderUserSuggestions(ids, dropdown, input) {
     dropdown.classList.add('show');
 }
 
+// Display-only title formatting: "Usual Suspects, The" -> "The Usual Suspects".
+// Source data (u.item), IDs and search logic are unchanged.
+function formatMovieTitle(title) {
+    const m = title.match(/^(.*),\s+(The|A|An)$/i);
+    if (m) return m[2] + ' ' + m[1];
+    return title;
+}
+
 // ===== Movie search: id or any part of title, case-insensitive =====
 function setupMovieSearch() {
     const input = document.getElementById('movie-input');
@@ -102,7 +110,8 @@ function setupMovieSearch() {
         for (const m of movies) {
             if (m.isRecommendable === false) continue;
             const titleLower = m.title.toLowerCase();
-            if (titleLower.includes(query) || String(m.id).includes(query)) {
+            const displayLower = formatMovieTitle(m.title).toLowerCase();
+            if (titleLower.includes(query) || displayLower.includes(query) || String(m.id).includes(query)) {
                 matches.push(m);
                 if (matches.length >= 20) break;
             }
@@ -138,7 +147,8 @@ function renderMovieSuggestions(list, dropdown, input) {
     list.forEach((m) => {
         const div = document.createElement('div');
         div.className = 'suggestion-item';
-        const fullTitle = m.year ? `${m.title} (${m.year})` : m.title;
+        const displayTitle = formatMovieTitle(m.title);
+        const fullTitle = m.year ? `${displayTitle} (${m.year})` : displayTitle;
         div.innerHTML = `<div class="suggestion-main">${fullTitle}</div><div class="suggestion-sub">ID: ${m.id}</div>`;
         div.addEventListener('click', () => {
             selectedMovieId = m.id;
@@ -487,7 +497,7 @@ function getTop5(userId, predictFn, limit = 5) {
         if (getMovieRatings(m.id).size < MIN_RATINGS_FOR_TOP5) continue;
         const p = predictFn(userId, m.id);
         if (p === null || p === undefined || Number.isNaN(p)) continue;
-        scored.push({ id: m.id, title: m.year ? `${m.title} (${m.year})` : m.title, prediction: p });
+        scored.push({ id: m.id, title: m.year ? `${formatMovieTitle(m.title)} (${m.year})` : formatMovieTitle(m.title), prediction: p });
     }
     scored.sort((a, b) => b.prediction - a.prediction || a.id - b.id);
     return scored.slice(0, limit);
