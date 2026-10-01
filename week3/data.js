@@ -5,12 +5,16 @@ let numUsers = 0;
 let numMovies = 0;
 
 // Lookup structures for collaborative filtering
+// Missing-value strategy for CF: use rated items only (co-rated items only). Missing ratings are not replaced with zero or averages.
 let userRatings = new Map();      // userId -> Map<movieId, rating>
 let movieRatings = new Map();     // movieId -> Map<userId, rating>
 let userMeans = new Map();        // userId -> mean rating
 let movieMeans = new Map();       // movieId -> mean rating
 
-// Movie data structure: { id: number, title: string, year: number }
+// 18 real MovieLens genres (index 5 is "unknown" and is excluded)
+const GENRES = ['Action', 'Adventure', 'Animation', "Children's", 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy', 'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western'];
+
+// Movie data structure: { id: number, title: string, year: number, genres: string[], genreVector: number[], isRecommendable: boolean }
 // Rating data structure: { userId: number, movieId: number, rating: number }
 
 async function loadData() {
@@ -97,11 +101,21 @@ function parseItemData(text) {
                 title = titleMatch[1].trim();
                 year = parseInt(titleMatch[2]);
             }
+
+            // Genre flags: field index 5 is "unknown" (excluded),
+            // real 18 genres are indexes 6-23
+            const genreVector = parts.slice(6, 24).map(Number);
+            const genres = GENRES.filter((g, i) => genreVector[i] === 1);
+            const isUnknown = Number(parts[5]) === 1;
+            const isRecommendable = !isUnknown && genres.length > 0;
             
             movieData.push({
                 id: id,
                 title: title,
-                year: year
+                year: year,
+                genres: genres,
+                genreVector: genreVector,
+                isRecommendable: isRecommendable
             });
         }
     }

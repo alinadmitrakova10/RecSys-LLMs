@@ -100,6 +100,7 @@ function setupMovieSearch() {
         }
         const matches = [];
         for (const m of movies) {
+            if (m.isRecommendable === false) continue;
             const titleLower = m.title.toLowerCase();
             if (titleLower.includes(query) || String(m.id).includes(query)) {
                 matches.push(m);
@@ -111,7 +112,7 @@ function setupMovieSearch() {
 
     input.addEventListener('focus', () => {
         if (input.value.trim() === '') {
-            renderMovieSuggestions(movies.slice(0, 20), dropdown, input);
+            renderMovieSuggestions(movies.filter((m) => m.isRecommendable !== false).slice(0, 20), dropdown, input);
         }
     });
 
@@ -158,8 +159,8 @@ function updatePredictButton() {
     document.getElementById('predict-btn').disabled = !(selectedUserId && selectedMovieId);
 }
 
-// ===== Predict with both CF approaches =====
-function predictRating() {
+// ===== Predict with both CF approaches (+ Top-5) =====
+async function predictRating() {
     if (!selectedUserId || !selectedMovieId) {
         showError('Please select both a user and a movie.');
         return;
@@ -168,6 +169,18 @@ function predictRating() {
         const userPred = predictUserBased(selectedUserId, selectedMovieId);
         const itemPred = predictItemBased(selectedUserId, selectedMovieId);
         showPredictions(userPred, itemPred);
+        updateStatus('Calculating Top-5 recommendations...');
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        const userTop5 = getUserBasedTop5(selectedUserId);
+        const itemTop5 = getItemBasedTop5(selectedUserId);
+        renderTop5(userTop5, itemTop5);
+        const statusElement = document.getElementById('status');
+        if (statusHideTimer) {
+            clearTimeout(statusHideTimer);
+            statusHideTimer = null;
+        }
+        statusElement.className = 'status';
+        statusElement.textContent = '';
     } catch (error) {
         console.error('Prediction error:', error);
         showError('Error making prediction: ' + error.message);
@@ -206,6 +219,34 @@ function showError(message) {
     resultElement.textContent = message;
 }
 
+function renderTop5List(items) {
+    if (!items || items.length === 0) {
+        return '<span class="no-prediction">No recommendations</span>';
+    }
+    return '<ol class="top5-list">' + items.map((it, idx) =>
+        `<li><span class="top5-rank">${idx + 1}.</span><span class="top5-title">${it.title}</span><span class="top5-score">${it.prediction.toFixed(2)}</span></li>`
+    ).join('') + '</ol>';
+}
+
+function renderTop5(userTop5, itemTop5) {
+    const resultElement = document.getElementById('result');
+    const card = document.createElement('div');
+    card.className = 'result-card top5-card';
+    card.innerHTML = `
+        <div class="pred">
+            <h4>Top-5 User-Based:</h4>
+            <div class="method-desc">Highest predicted unrated movies</div>
+            ${renderTop5List(userTop5)}
+        </div>
+        <div class="divider"></div>
+        <div class="pred">
+            <h4>Top-5 Item-Based:</h4>
+            <div class="method-desc">Highest predicted unrated movies</div>
+            ${renderTop5List(itemTop5)}
+        </div>`;
+    resultElement.appendChild(card);
+}
+
 // UI helper functions
 let statusHideTimer = null;
 
@@ -238,9 +279,37 @@ function updateStatusLoaded() {
 
 // ===== Collaborative Filtering Similarity Functions =====
 
+// ===== Similarity caches (memoization only; Pearson formulas below are unchanged) =====
+const userSimCache = new Map(); // "a_b" -> { similarity, commonCount }
+const movieSimCache = new Map(); // "a_b" -> { similarity, commonCount }
+
+function pairKey(a, b) {
+    return a < b ? a + '_' + b : b + '_' + a;
+}
+
+function getUserSimilarity(userId1, userId2) {
+    const key = pairKey(userId1, userId2);
+    let res = userSimCache.get(key);
+    if (!res) {
+        res = computeUserSimilarity(userId1, userId2);
+        userSimCache.set(key, res);
+    }
+    return res;
+}
+
+function getMovieSimilarity(movieId1, movieId2) {
+    const key = pairKey(movieId1, movieId2);
+    let res = movieSimCache.get(key);
+    if (!res) {
+        res = computeMovieSimilarity(movieId1, movieId2);
+        movieSimCache.set(key, res);
+    }
+    return res;
+}
+
 // Pearson correlation between two users
 // Returns { similarity, commonCount }
-function getUserSimilarity(userId1, userId2) {
+function computeUserSimilarity(userId1, userId2) {
     const ratings1 = getUserRatings(userId1);
     const ratings2 = getUserRatings(userId2);
     
@@ -289,7 +358,7 @@ function getUserSimilarity(userId1, userId2) {
 
 // Pearson correlation between two movies (items)
 // Returns { similarity, commonCount }
-function getMovieSimilarity(movieId1, movieId2) {
+function computeMovieSimilarity(movieId1, movieId2) {
     const ratings1 = getMovieRatings(movieId1);
     const ratings2 = getMovieRatings(movieId2);
     
@@ -402,4 +471,34 @@ function predictUserBased(userId, movieId) {
     
     const prediction = targetUserMean + weightedSum / similaritySum;
     return Math.max(1, Math.min(5, prediction));
+}
+
+// ===== Top-5 recommendations (only unrated + recommendable movies, existing predict functions) =====
+// Ranking uses the regular 1-5 predictions; ties are broken by smaller movie ID.
+// Reliability filter for the recommendation list only: skip movies with fewer
+// than MIN_RATINGS_FOR_TOP5 ratings so rare films do not top the list on thin evidence.
+const MIN_RATINGS_FOR_TOP5 = 20;
+function getTop5(userId, predictFn, limit = 5) {
+    const rated = getUserRatings(userId);
+    const scored = [];
+    for (const m of movies) {
+        if (m.isRecommendable === false) continue;
+        if (rated.has(m.id)) continue;
+        if (getMovieRatings(m.id).size < MIN_RATINGS_FOR_TOP5) continue;
+        const p = predictFn(userId, m.id);
+        if (p === null || p === undefined || Number.isNaN(p)) continue;
+        scored.push({ id: m.id, title: m.year ? `${m.title} (${m.year})` : m.title, prediction: p });
+    }
+    scored.sort((a, b) => b.prediction - a.prediction || a.id - b.id);
+    return scored.slice(0, limit);
+}
+
+// Console-checkable: Top-5 by User-Based CF
+function getUserBasedTop5(userId) {
+    return getTop5(userId, predictUserBased, 5);
+}
+
+// Console-checkable: Top-5 by Item-Based CF
+function getItemBasedTop5(userId) {
+    return getTop5(userId, predictItemBased, 5);
 }

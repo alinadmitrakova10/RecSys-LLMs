@@ -266,6 +266,48 @@ header h1 {
     animation: fadeIn 0.4s ease;
 }
 
+.top5-card {
+    margin-top: 10px;
+}
+
+.top5-list {
+    list-style: none;
+    text-align: left;
+    margin-top: 6px;
+}
+
+.top5-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 0.78rem;
+    padding: 3px 0;
+    border-top: 1px solid #f1f5f9;
+}
+
+.top5-list li:first-child {
+    border-top: none;
+}
+
+.top5-rank {
+    color: #94a3b8;
+    min-width: 14px;
+}
+
+.top5-title {
+    flex: 1;
+    color: #1e293b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.top5-score {
+    font-weight: 700;
+    color: #17407c;
+    white-space: nowrap;
+}
+
 @media (max-width: 560px) {
     .search-row {
         flex-direction: column;
