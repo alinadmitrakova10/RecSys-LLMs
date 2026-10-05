@@ -909,8 +909,12 @@ function renderResultsPage(activeIndex) {
   const searchInput = target.querySelector("#rule-search");
   searchInput.addEventListener("input", (event) => {
     currentSearchQuery = event.target.value;
+    const cursorPosition = event.target.selectionStart ?? currentSearchQuery.length;
     currentPage = 1;
     renderResultsPage(activeIndex);
+    const updatedSearchInput = target.querySelector("#rule-search");
+    updatedSearchInput.focus();
+    updatedSearchInput.setSelectionRange(cursorPosition, cursorPosition);
   });
   const liftFilterSelect = target.querySelector("#lift-filter");
   liftFilterSelect.addEventListener("change", (event) => {
