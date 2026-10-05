@@ -1,0 +1,43 @@
+name: Deploy Weeks 2, 3 and 4 to GitHub Pages
+
+on:
+  push:
+    branches:
+      - alina-04-association-rules
+    paths:
+      - "week2/**"
+      - "week3/**"
+      - "week4/**"
+      - ".github/workflows/deploy-week4.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Build Pages site
+        run: |
+          mkdir site
+          cp week3/pages/index.html site/index.html
+          cp -R week2 site/week2
+          cp -R week3 site/week3
+          cp -R week4 site/week4
+      - name: Upload Weeks 2, 3 and 4
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./site
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
