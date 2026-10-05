@@ -782,10 +782,13 @@ function renderDatasetSummary(index, container) {
  * @param {HTMLElement|null} [container]
  * @returns {void}
  */
-// Pagination state
+// Pagination and search state
 let allRules = [];
+let filteredRules = [];
 let currentPage = 1;
 const RULES_PER_PAGE = 6;
+let currentSearchQuery = "";
+let currentLiftFilter = "gt"; // "all" | "lt" | "eq" | "gt"
 
 /**
  * Render the rule list into a table with pagination.
@@ -808,23 +811,51 @@ function renderResults(rules, index, container) {
   }
 
   allRules = rules;
+  filteredRules = rules;
   currentPage = 1;
-  renderResultsPage(activeIndex);
+  currentSearchQuery = "";
+  currentLiftFilter = "gt";
+  
+  // Initial render with search box
+  renderResultsPage(activeIndex, true);
 }
 
-function renderResultsPage(activeIndex) {
+function renderResultsPage(activeIndex, isInitialRender = false) {
   const target = document.getElementById("results");
   if (!target) return;
 
-  const totalRules = allRules.length;
+  // Apply search filter if query exists
+  if (currentSearchQuery) {
+    const query = currentSearchQuery.toLowerCase();
+    filteredRules = allRules.filter((rule) => {
+      const enriched = enrichRule(rule, activeIndex);
+      const antecedentText = formatItemset(enriched.antecedent, activeIndex).toLowerCase();
+      const consequentText = formatItemset(enriched.consequent, activeIndex).toLowerCase();
+      return antecedentText.includes(query) || consequentText.includes(query);
+    });
+  } else {
+    filteredRules = allRules;
+  }
+
+  // Apply lift filter
+  if (currentLiftFilter === "lt") {
+    filteredRules = filteredRules.filter((rule) => rule.lift < 1);
+  } else if (currentLiftFilter === "eq") {
+    filteredRules = filteredRules.filter((rule) => Math.abs(rule.lift - 1) < 0.0001);
+  } else if (currentLiftFilter === "gt") {
+    filteredRules = filteredRules.filter((rule) => rule.lift > 1);
+  }
+  // "all" means no additional filtering
+
+  const totalRules = filteredRules.length;
   const totalPages = Math.ceil(totalRules / RULES_PER_PAGE);
   const startIdx = (currentPage - 1) * RULES_PER_PAGE;
   const endIdx = Math.min(startIdx + RULES_PER_PAGE, totalRules);
-  const pageRules = allRules.slice(startIdx, endIdx);
+  const pageRules = filteredRules.slice(startIdx, endIdx);
 
-const body = pageRules
+  const body = pageRules
     .map((rule, localIndex) => {
-      const globalIndex = startIdx + localIndex;
+      const globalIndex = allRules.indexOf(rule);
       const enriched = enrichRule(rule, activeIndex);
       return `
         <tr tabindex="0" data-rule-index="${globalIndex}">
@@ -840,42 +871,105 @@ const body = pageRules
     })
     .join("");
 
-  const paginationControlsTopHtml = `
-    <div class="pagination-controls">
-      <button type="button" class="pagination-arrow" id="prev-page-top" ${currentPage === 1 ? "disabled" : ""} aria-label="Previous page">&lsaquo;</button>
-      <span class="pagination-page">Page ${currentPage} of ${totalPages}</span>
-      <button type="button" class="pagination-arrow" id="next-page-top" ${currentPage === totalPages ? "disabled" : ""} aria-label="Next page">&rsaquo;</button>
-    </div>`;
+  const paginationControlsTopInnerHtml = `
+    <button type="button" class="pagination-arrow" id="prev-page-top" ${currentPage === 1 ? "disabled" : ""} aria-label="Previous page">&lsaquo;</button>
+    <span class="pagination-page">Page ${currentPage} of ${totalPages || 1}</span>
+    <button type="button" class="pagination-arrow" id="next-page-top" ${currentPage === totalPages || totalPages === 0 ? "disabled" : ""} aria-label="Next page">&rsaquo;</button>`;
 
-  const paginationControlsBottomHtml = `
-    <div class="pagination-controls">
-      <button type="button" class="pagination-arrow" id="prev-page-bottom" ${currentPage === 1 ? "disabled" : ""} aria-label="Previous page">&lsaquo;</button>
-      <span class="pagination-page">Page ${currentPage} of ${totalPages}</span>
-      <button type="button" class="pagination-arrow" id="next-page-bottom" ${currentPage === totalPages ? "disabled" : ""} aria-label="Next page">&rsaquo;</button>
-    </div>`;
+  const paginationControlsBottomInnerHtml = `
+    <button type="button" class="pagination-arrow" id="prev-page-bottom" ${currentPage === 1 ? "disabled" : ""} aria-label="Previous page">&lsaquo;</button>
+    <span class="pagination-page">Page ${currentPage} of ${totalPages || 1}</span>
+    <button type="button" class="pagination-arrow" id="next-page-bottom" ${currentPage === totalPages || totalPages === 0 ? "disabled" : ""} aria-label="Next page">&rsaquo;</button>`;
 
-  const paginationInfoHtml = `<div class="pagination-info">Showing ${startIdx + 1}–${endIdx} of ${totalRules} rules</div>`;
+  const paginationInfoText = totalRules > 0
+      ? `Showing ${startIdx + 1}–${endIdx} of ${totalRules} rules`
+      : "No matching rules found";
 
-  target.innerHTML = `
-    <p class="results-count">${totalRules} rule${totalRules === 1 ? "" : "s"}.</p>
-    <div class="pagination-top">${paginationInfoHtml}${paginationControlsTopHtml}</div>
-    <table class="data-table rules-table">
-      <thead>
-        <tr>
-          <th scope="col">Antecedent (A)</th>
-          <th scope="col">Consequent (B)</th>
-          <th scope="col">count(A\u222aB)</th>
-          <th scope="col">count(A)</th>
-          <th scope="col">count(B)</th>
-          <th scope="col">support</th>
-          <th scope="col">confidence</th>
-          <th scope="col">lift</th>
-        </tr>
-      </thead>
-      <tbody>${body}</tbody>
-    </table>
-    <div class="pagination-bottom">${paginationInfoHtml}${paginationControlsBottomHtml}</div>`;
+  const resultsCountHtml = `${totalRules} rule${totalRules === 1 ? "" : "s"}${currentSearchQuery || currentLiftFilter !== "all" ? ` (filtered from ${allRules.length})` : ""}.`;
 
+  // On initial render, build the full structure including search box
+  if (isInitialRender) {
+    const searchHtml = `
+      <div class="search-box">
+        <label for="rule-search" class="visually-hidden">Search rules</label>
+        <input type="search" id="rule-search" placeholder="Search rules (StockCode or name)..." value="${escapeHtml(currentSearchQuery)}" aria-label="Search rules">
+        <label for="lift-filter" class="lift-filter-label">Lift filter</label>
+        <select id="lift-filter" class="lift-filter-select" aria-label="Filter by lift">
+          <option value="all"${currentLiftFilter === "all" ? " selected" : ""}>All rules</option>
+          <option value="lt"${currentLiftFilter === "lt" ? " selected" : ""}>lift < 1</option>
+          <option value="eq"${currentLiftFilter === "eq" ? " selected" : ""}>lift = 1</option>
+          <option value="gt"${currentLiftFilter === "gt" ? " selected" : ""}>lift > 1</option>
+        </select>
+      </div>`;
+
+    target.innerHTML = `
+      <p class="results-count">${resultsCountHtml}</p>
+      ${searchHtml}
+      <div class="pagination-top"><div class="pagination-info">${paginationInfoText}</div><div class="pagination-controls">${paginationControlsTopInnerHtml}</div></div>
+      <table class="data-table rules-table">
+        <thead>
+          <tr>
+            <th scope="col">Antecedent (A)</th>
+            <th scope="col">Consequent (B)</th>
+            <th scope="col">count(A\u222aB)</th>
+            <th scope="col">count(A)</th>
+            <th scope="col">count(B)</th>
+            <th scope="col">support</th>
+            <th scope="col">confidence</th>
+            <th scope="col">lift</th>
+          </tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>
+      <div class="pagination-bottom"><div class="pagination-info">${paginationInfoText}</div><div class="pagination-controls">${paginationControlsBottomInnerHtml}</div></div>`;
+
+    // Search input event listener (only attach once on initial render)
+    const searchInput = target.querySelector("#rule-search");
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        currentSearchQuery = e.target.value;
+        currentPage = 1;
+        renderResultsPage(activeIndex, false);
+      });
+    }
+
+    // Lift filter select event listener
+    const liftFilterSelect = target.querySelector("#lift-filter");
+    if (liftFilterSelect) {
+      liftFilterSelect.addEventListener("change", (e) => {
+        currentLiftFilter = e.target.value;
+        currentPage = 1;
+        renderResultsPage(activeIndex, false);
+      });
+    }
+  } else {
+    // Update only the dynamic parts: results count, table body, pagination info/controls
+    const countEl = target.querySelector(".results-count");
+    if (countEl) countEl.textContent = resultsCountHtml;
+
+    const tbody = target.querySelector(".rules-table tbody");
+    if (tbody) tbody.innerHTML = body;
+
+    const infoTop = target.querySelector(".pagination-top .pagination-info");
+    if (infoTop) infoTop.textContent = paginationInfoText;
+
+    const infoBottom = target.querySelector(".pagination-bottom .pagination-info");
+    if (infoBottom) infoBottom.textContent = paginationInfoText;
+
+    const controlsTop = target.querySelector(".pagination-top .pagination-controls");
+    if (controlsTop) controlsTop.innerHTML = paginationControlsTopInnerHtml;
+
+    const controlsBottom = target.querySelector(".pagination-bottom .pagination-controls");
+    if (controlsBottom) controlsBottom.innerHTML = paginationControlsBottomInnerHtml;
+
+    // Update lift filter select value without recreating it
+    const liftFilterSelect = target.querySelector("#lift-filter");
+    if (liftFilterSelect) {
+      liftFilterSelect.value = currentLiftFilter;
+    }
+  }
+
+  // Re-attach row click handlers (tbody was replaced)
   target.querySelectorAll("tr[data-rule-index]").forEach((row) => {
     const activate = () => {
       const rule = allRules[Number(row.dataset.ruleIndex)];
@@ -890,22 +984,25 @@ const body = pageRules
     });
   });
 
+  // Re-attach pagination button handlers
   const prevBtns = target.querySelectorAll("#prev-page-top, #prev-page-bottom");
   const nextBtns = target.querySelectorAll("#next-page-top, #next-page-bottom");
   prevBtns.forEach((btn) => {
+    btn.onclick = null; // Remove old handler
     btn.addEventListener("click", () => {
       if (currentPage > 1) {
         currentPage--;
-        renderResultsPage(activeIndex);
+        renderResultsPage(activeIndex, false);
       }
     });
   });
   nextBtns.forEach((btn) => {
+    btn.onclick = null;
     btn.addEventListener("click", () => {
-      const totalPages = Math.ceil(allRules.length / RULES_PER_PAGE);
+      const totalPages = Math.ceil(filteredRules.length / RULES_PER_PAGE);
       if (currentPage < totalPages) {
         currentPage++;
-        renderResultsPage(activeIndex);
+        renderResultsPage(activeIndex, false);
       }
     });
   });
