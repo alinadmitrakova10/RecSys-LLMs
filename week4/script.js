@@ -184,8 +184,22 @@ function asIndex(basketsOrIndex) {
  * @returns {number} count(A) for a single-element `stocks`, count(A union B) for two.
  */
 function countItemset(basketsOrIndex, stocks) {
-  // TODO(hw4): intersect the posting lists and return the number of baskets.
-  throw new Error("TODO(hw4): countItemset is not implemented yet.");
+  const index = asIndex(basketsOrIndex);
+  const uniqueStocks = [...new Set(stocks.map(stockOf))];
+  if (uniqueStocks.length === 0) return 0;
+  const postings = [];
+  for (const stock of uniqueStocks) {
+    const posting = index.byStock.get(stock);
+    if (!posting) return 0;
+    postings.push(posting);
+  }
+  postings.sort((a, b) => a.size - b.size);
+  let intersection = postings[0];
+  for (let i = 1; i < postings.length; i++) {
+    intersection = new Set([...intersection].filter((x) => postings[i].has(x)));
+    if (intersection.size === 0) return 0;
+  }
+  return intersection.size;
 }
 
 /**
@@ -228,8 +242,16 @@ function countPair(basketsOrIndex, stockA, stockB) {
  * @returns {Array<string>} unique stock codes, in first-appearance order.
  */
 function dedupeBasket(rawItems) {
-  // TODO(hw4): return the unique stock codes in first-appearance order.
-  throw new Error("TODO(hw4): dedupeBasket is not implemented yet.");
+  const seen = new Set();
+  const result = [];
+  for (const item of rawItems) {
+    const stock = stockOf(item);
+    if (!seen.has(stock)) {
+      seen.add(stock);
+      result.push(stock);
+    }
+  }
+  return result;
 }
 
 /**
@@ -246,8 +268,10 @@ function dedupeBasket(rawItems) {
  * @returns {{value: number, defined: boolean}} `defined` is false when `n === 0`.
  */
 function computeSupport(jointCount, n) {
-  // TODO(hw4): support = jointCount / n, undefined when n === 0.
-  throw new Error("TODO(hw4): computeSupport is not implemented yet.");
+  if (n === 0) {
+    return { value: 0, defined: false };
+  }
+  return { value: jointCount / n, defined: true };
 }
 
 /**
@@ -265,8 +289,10 @@ function computeSupport(jointCount, n) {
  * @returns {{value: number, defined: boolean}}
  */
 function computeConfidence(jointCount, antecedentCount) {
-  // TODO(hw4): confidence = jointCount / antecedentCount, undefined when count(A) === 0.
-  throw new Error("TODO(hw4): computeConfidence is not implemented yet.");
+  if (antecedentCount === 0) {
+    return { value: 0, defined: false };
+  }
+  return { value: jointCount / antecedentCount, defined: true };
 }
 
 /**
@@ -287,8 +313,14 @@ function computeConfidence(jointCount, antecedentCount) {
  * @returns {{value: number, defined: boolean}}
  */
 function computeLift(confidence, consequentCount, n) {
-  // TODO(hw4): lift = confidence / (consequentCount / n), guarded.
-  throw new Error("TODO(hw4): computeLift is not implemented yet.");
+  if (!confidence || !confidence.defined || n === 0 || consequentCount === 0) {
+    return { value: 0, defined: false };
+  }
+  const baseline = consequentCount / n;
+  if (baseline === 0) {
+    return { value: 0, defined: false };
+  }
+  return { value: confidence.value / baseline, defined: true };
 }
 
 /**
@@ -333,8 +365,87 @@ function validateThresholds(minSupport, minConfidence) {
  * @returns {Array<{items: string[], count: number, support: number}>} frequent itemsets
  */
 function findFrequentItemsets(transactions, minSupport) {
-  // TODO(hw4): implement Apriori (or an equivalent frequent-itemset miner).
-  throw new Error("TODO(hw4): findFrequentItemsets is not implemented yet.");
+  const index = asIndex(transactions);
+  const N = index.n;
+  const minCount = minSupport * N;
+  const frequentItemsets = [];
+
+  // Level 1: single items
+  const frequent1 = [];
+  for (const [stock, posting] of index.byStock.entries()) {
+    const count = posting.size;
+    if (count >= minCount) {
+      frequent1.push({ items: [stock], count, support: count / N });
+    }
+  }
+  frequentItemsets.push(...frequent1);
+
+  // Higher levels
+  let prevLevel = frequent1;
+  let k = 2;
+  while (prevLevel.length > 0) {
+    const candidates = new Map();
+
+    // Generate candidates by joining pairs of (k-1)-itemsets
+    for (let i = 0; i < prevLevel.length; i++) {
+      for (let j = i + 1; j < prevLevel.length; j++) {
+        const items1 = prevLevel[i].items;
+        const items2 = prevLevel[j].items;
+
+        // Check if first k-2 items match (for joining)
+        let match = true;
+        for (let m = 0; m < k - 2; m++) {
+          if (items1[m] !== items2[m]) {
+            match = false;
+            break;
+          }
+        }
+        if (!match) continue;
+
+        // Create candidate by combining the last items
+        const candidate = [...items1, items2[k - 2]].sort();
+        const key = candidate.join(",");
+
+        if (candidates.has(key)) continue;
+
+        // Downward closure pruning: check all (k-1)-subsets are frequent
+        let allSubsetsFrequent = true;
+        for (let m = 0; m < k; m++) {
+          const subset = candidate.slice(0, m).concat(candidate.slice(m + 1));
+          const subsetKey = subset.join(",");
+          let found = false;
+          for (const freq of prevLevel) {
+            if (freq.items.join(",") === subsetKey) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            allSubsetsFrequent = false;
+            break;
+          }
+        }
+        if (!allSubsetsFrequent) continue;
+
+        candidates.set(key, candidate);
+      }
+    }
+
+    // Count support for candidates
+    const currentLevel = [];
+    for (const candidate of candidates.values()) {
+      const count = countItemset(index, candidate);
+      if (count >= minCount) {
+        currentLevel.push({ items: candidate, count, support: count / N });
+      }
+    }
+
+    frequentItemsets.push(...currentLevel);
+    prevLevel = currentLevel;
+    k++;
+  }
+
+  return frequentItemsets;
 }
 
 /**
@@ -360,9 +471,64 @@ function findFrequentItemsets(transactions, minSupport) {
  * @returns {Rule[]}
  */
 function generateRules(frequentItemsets, minConfidence) {
-  // TODO(hw4): generate candidate rules from each frequent itemset, compute
-  // confidence in both directions, then keep the rules that pass the threshold.
-  throw new Error("TODO(hw4): generateRules is not implemented yet.");
+  const rules = [];
+
+  const countMap = new Map();
+  for (const itemset of frequentItemsets) {
+    const key = [...itemset.items].sort().join(",");
+    countMap.set(key, itemset.count);
+  }
+
+  const N = frequentItemsets[0] ? frequentItemsets[0].count / frequentItemsets[0].support : 0;
+
+  for (const itemset of frequentItemsets) {
+    const items = [...itemset.items].sort();
+    if (items.length < 2) continue;
+
+    const jointCount = itemset.count;
+
+    for (let mask = 1; mask < (1 << items.length) - 1; mask++) {
+      const antecedent = [];
+      const consequent = [];
+      for (let i = 0; i < items.length; i++) {
+        if (mask & (1 << i)) {
+          antecedent.push(items[i]);
+        } else {
+          consequent.push(items[i]);
+        }
+      }
+
+      if (antecedent.length === 0 || consequent.length === 0) continue;
+
+      const antKey = antecedent.join(",");
+      const conKey = consequent.join(",");
+
+      const antecedentCount = countMap.get(antKey) || 0;
+      const consequentCount = countMap.get(conKey) || 0;
+
+      if (antecedentCount === 0 || consequentCount === 0) continue;
+
+      const support = jointCount / N;
+      const confidence = jointCount / antecedentCount;
+
+      if (confidence < minConfidence) continue;
+
+      const lift = confidence / (consequentCount / N);
+
+      rules.push({
+        antecedent,
+        consequent,
+        jointCount,
+        antecedentCount,
+        consequentCount,
+        support,
+        confidence,
+        lift,
+      });
+    }
+  }
+
+  return rules;
 }
 
 // ---------------------------------------------------------------------------
@@ -616,6 +782,19 @@ function renderDatasetSummary(index, container) {
  * @param {HTMLElement|null} [container]
  * @returns {void}
  */
+// Pagination state
+let allRules = [];
+let currentPage = 1;
+const RULES_PER_PAGE = 6;
+
+/**
+ * Render the rule list into a table with pagination.
+ *
+ * @param {Rule[]} rules
+ * @param {BasketIndex} [index]
+ * @param {HTMLElement|null} [container]
+ * @returns {void}
+ */
 function renderResults(rules, index, container) {
   const target = container || document.getElementById("results");
   if (!target) return;
@@ -628,11 +807,27 @@ function renderResults(rules, index, container) {
     return;
   }
 
-  const body = rules
-    .map((rule, rowIndex) => {
+  allRules = rules;
+  currentPage = 1;
+  renderResultsPage(activeIndex);
+}
+
+function renderResultsPage(activeIndex) {
+  const target = document.getElementById("results");
+  if (!target) return;
+
+  const totalRules = allRules.length;
+  const totalPages = Math.ceil(totalRules / RULES_PER_PAGE);
+  const startIdx = (currentPage - 1) * RULES_PER_PAGE;
+  const endIdx = Math.min(startIdx + RULES_PER_PAGE, totalRules);
+  const pageRules = allRules.slice(startIdx, endIdx);
+
+const body = pageRules
+    .map((rule, localIndex) => {
+      const globalIndex = startIdx + localIndex;
       const enriched = enrichRule(rule, activeIndex);
       return `
-        <tr tabindex="0" data-rule-index="${rowIndex}">
+        <tr tabindex="0" data-rule-index="${globalIndex}">
           <td>${escapeHtml(formatItemset(enriched.antecedent, activeIndex))}</td>
           <td>${escapeHtml(formatItemset(enriched.consequent, activeIndex))}</td>
           <td class="num">${enriched.jointCount}</td>
@@ -645,14 +840,31 @@ function renderResults(rules, index, container) {
     })
     .join("");
 
+  const paginationControlsTopHtml = `
+    <div class="pagination-controls">
+      <button type="button" class="pagination-arrow" id="prev-page-top" ${currentPage === 1 ? "disabled" : ""} aria-label="Previous page">&lsaquo;</button>
+      <span class="pagination-page">Page ${currentPage} of ${totalPages}</span>
+      <button type="button" class="pagination-arrow" id="next-page-top" ${currentPage === totalPages ? "disabled" : ""} aria-label="Next page">&rsaquo;</button>
+    </div>`;
+
+  const paginationControlsBottomHtml = `
+    <div class="pagination-controls">
+      <button type="button" class="pagination-arrow" id="prev-page-bottom" ${currentPage === 1 ? "disabled" : ""} aria-label="Previous page">&lsaquo;</button>
+      <span class="pagination-page">Page ${currentPage} of ${totalPages}</span>
+      <button type="button" class="pagination-arrow" id="next-page-bottom" ${currentPage === totalPages ? "disabled" : ""} aria-label="Next page">&rsaquo;</button>
+    </div>`;
+
+  const paginationInfoHtml = `<div class="pagination-info">Showing ${startIdx + 1}–${endIdx} of ${totalRules} rules</div>`;
+
   target.innerHTML = `
-    <p class="results-count">${rules.length} rule${rules.length === 1 ? "" : "s"}.</p>
+    <p class="results-count">${totalRules} rule${totalRules === 1 ? "" : "s"}.</p>
+    <div class="pagination-top">${paginationInfoHtml}${paginationControlsTopHtml}</div>
     <table class="data-table rules-table">
       <thead>
         <tr>
           <th scope="col">Antecedent (A)</th>
           <th scope="col">Consequent (B)</th>
-          <th scope="col">count(A∪B)</th>
+          <th scope="col">count(A\u222aB)</th>
           <th scope="col">count(A)</th>
           <th scope="col">count(B)</th>
           <th scope="col">support</th>
@@ -661,11 +873,12 @@ function renderResults(rules, index, container) {
         </tr>
       </thead>
       <tbody>${body}</tbody>
-    </table>`;
+    </table>
+    <div class="pagination-bottom">${paginationInfoHtml}${paginationControlsBottomHtml}</div>`;
 
   target.querySelectorAll("tr[data-rule-index]").forEach((row) => {
     const activate = () => {
-      const rule = rules[Number(row.dataset.ruleIndex)];
+      const rule = allRules[Number(row.dataset.ruleIndex)];
       renderRuleDetail(rule, activeIndex);
     };
     row.addEventListener("click", activate);
@@ -673,6 +886,26 @@ function renderResults(rules, index, container) {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         activate();
+      }
+    });
+  });
+
+  const prevBtns = target.querySelectorAll("#prev-page-top, #prev-page-bottom");
+  const nextBtns = target.querySelectorAll("#next-page-top, #next-page-bottom");
+  prevBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderResultsPage(activeIndex);
+      }
+    });
+  });
+  nextBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const totalPages = Math.ceil(allRules.length / RULES_PER_PAGE);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderResultsPage(activeIndex);
       }
     });
   });
@@ -1023,6 +1256,7 @@ function syncThresholdLabels() {
  */
 function runPipeline() {
   const status = document.getElementById("status");
+  const runBtn = document.getElementById("run-rules");
   if (!DATASET_INDEX) {
     if (status) {
       status.textContent = "Dataset not ready yet — reload the page.";
@@ -1035,23 +1269,32 @@ function runPipeline() {
     if (status) status.textContent = validation.errors.join(" ");
     return;
   }
-  try {
-    if (status) status.textContent = "Mining frequent itemsets…";
-    const itemsets = findFrequentItemsets(TRANSACTIONS, minSupport);
-    const rules = generateRules(itemsets, minConfidence);
-    renderResults(rules, DATASET_INDEX);
-    if (status) status.textContent = `Done — ${rules.length} rule(s) at support \u2265 ${(minSupport * 100).toFixed(1)}% and confidence \u2265 ${(minConfidence * 100).toFixed(0)}%.`;
-  } catch (error) {
-    const message = String(error && error.message ? error.message : error);
-    const resultsEl = document.getElementById("results");
-    if (resultsEl) {
-      resultsEl.innerHTML =
-        '<p class="empty-state">Run failed &mdash; the rule miner did not complete. ' +
-        "Implement the <code>TODO(hw4)</code> functions, then press &ldquo;Run rules&rdquo;. " +
-        `Error: ${escapeHtml(message)}</p>`;
+
+  // Show loading state immediately and disable button
+  if (status) status.textContent = "Mining frequent itemsets… please wait.";
+  if (runBtn) runBtn.disabled = true;
+
+  // Use setTimeout(0) to let the UI update before heavy computation
+  setTimeout(() => {
+    try {
+      const itemsets = findFrequentItemsets(TRANSACTIONS, minSupport);
+      const rules = generateRules(itemsets, minConfidence);
+      renderResults(rules, DATASET_INDEX);
+      if (status) status.textContent = `Done — ${rules.length} rule(s) at support \u2265 ${(minSupport * 100).toFixed(1)}% and confidence \u2265 ${(minConfidence * 100).toFixed(0)}%.`;
+    } catch (error) {
+      const message = String(error && error.message ? error.message : error);
+      const resultsEl = document.getElementById("results");
+      if (resultsEl) {
+        resultsEl.innerHTML =
+          '<p class="empty-state">Run failed &mdash; the rule miner did not complete. ' +
+          "Implement the <code>TODO(hw4)</code> functions, then press &ldquo;Run rules&rdquo;. " +
+          `Error: ${escapeHtml(message)}</p>`;
+      }
+      if (status) status.textContent = message;
+    } finally {
+      if (runBtn) runBtn.disabled = false;
     }
-    if (status) status.textContent = message;
-  }
+  }, 0);
 }
 
 /**

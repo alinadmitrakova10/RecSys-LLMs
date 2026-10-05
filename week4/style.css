@@ -295,6 +295,73 @@ input[type="range"]:focus-visible {
   font-size: 0.9rem;
 }
 
+/* --- pagination ---------------------------------------------------------- */
+
+.pagination-top,
+.pagination-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.pagination-top {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+}
+
+.pagination-bottom {
+  border-top: 1px solid var(--border);
+  margin-top: 0.5rem;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pagination-arrow {
+  padding: 0.2rem 0.5rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--accent);
+  cursor: pointer;
+  min-width: 2.2rem;
+  text-align: center;
+}
+
+.pagination-arrow:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+.pagination-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: var(--surface);
+  color: var(--muted);
+  border-color: var(--border);
+}
+
+.pagination-page {
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-width: 90px;
+  text-align: center;
+}
+
 /* --- responsive --------------------------------------------------------- */
 
 @media (max-width: 700px) {
