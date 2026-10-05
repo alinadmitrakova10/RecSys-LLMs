@@ -912,9 +912,12 @@ function renderResultsPage(activeIndex) {
     const cursorPosition = event.target.selectionStart ?? currentSearchQuery.length;
     currentPage = 1;
     renderResultsPage(activeIndex);
-    const updatedSearchInput = target.querySelector("#rule-search");
-    updatedSearchInput.focus();
-    updatedSearchInput.setSelectionRange(cursorPosition, cursorPosition);
+    requestAnimationFrame(() => {
+      const updatedSearchInput = target.querySelector("#rule-search");
+      if (!updatedSearchInput) return;
+      updatedSearchInput.focus({ preventScroll: true });
+      updatedSearchInput.setSelectionRange(cursorPosition, cursorPosition);
+    });
   });
   const liftFilterSelect = target.querySelector("#lift-filter");
   liftFilterSelect.addEventListener("change", (event) => {
