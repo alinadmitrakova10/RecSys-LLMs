@@ -295,62 +295,34 @@ input[type="range"]:focus-visible {
   font-size: 0.9rem;
 }
 
-/* --- search -------------------------------------------------------------- */
+/* --- rule search and filter ------------------------------------------------ */
 
-.search-box {
-  margin-bottom: 0.75rem;
-}
-
-.search-box input[type="search"] {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  font: inherit;
-  font-size: 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  box-sizing: border-box;
-}
-
-.search-box input[type="search"]:focus {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-  border-color: var(--accent);
-}
-
-.search-box input[type="search"]::placeholder {
-  color: var(--muted);
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* --- search box with lift filter ------------------------------------------ */
-
-.search-box {
+.rule-tools {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  align-items: flex-end;
+  align-items: end;
   margin-bottom: 0.75rem;
 }
 
-.search-box > * {
+.rule-search-field,
+.lift-filter-field {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.rule-search-field {
   flex: 1 1 200px;
-  min-width: 0;
 }
 
-.search-box input[type="search"] {
+.lift-filter-field {
+  flex: 0 1 140px;
+}
+
+.rule-tools input,
+.rule-tools select {
   width: 100%;
   padding: 0.5rem 0.75rem;
   font: inherit;
@@ -362,46 +334,15 @@ input[type="range"]:focus-visible {
   box-sizing: border-box;
 }
 
-.search-box input[type="search"]:focus {
+.rule-tools input:focus,
+.rule-tools select:focus {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
   border-color: var(--accent);
 }
 
-.search-box input[type="search"]::placeholder {
+.rule-tools input::placeholder {
   color: var(--muted);
-}
-
-.lift-filter-label {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--muted);
-  margin-bottom: 0.25rem;
-  white-space: nowrap;
-}
-
-.lift-filter-select {
-  width: 100%;
-  max-width: 160px;
-  padding: 0.5rem 0.75rem;
-  font: inherit;
-  font-size: 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  box-sizing: border-box;
-  cursor: pointer;
-}
-
-.lift-filter-select:focus {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-  border-color: var(--accent);
-}
-
-.min-lift-input:invalid {
-  border-color: #b4530a;
 }
 
 /* --- pagination ---------------------------------------------------------- */
