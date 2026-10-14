@@ -214,6 +214,33 @@ button.secondary:hover {
   border-color: var(--accent-hover);
 }
 
+/* --- button loading spinner --------------------------------------------- */
+
+button.is-loading {
+  position: relative;
+  padding-left: 2.2rem;
+}
+
+button.is-loading::before {
+  content: "";
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  opacity: 0.9;
+}
+
+@keyframes spin {
+  from { transform: translateY(-50%) rotate(0deg); }
+  to { transform: translateY(-50%) rotate(360deg); }
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;

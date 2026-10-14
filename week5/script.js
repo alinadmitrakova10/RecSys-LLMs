@@ -242,6 +242,42 @@ function clamp(value, lo, hi) {
   return Math.min(hi, Math.max(lo, value));
 }
 
+/**
+ * Set button loading state with spinner and two rAF + 50ms delay.
+ * @param {HTMLButtonElement} btn
+ * @param {boolean} loading
+ * @param {string} [loadingText]
+ * @param {string} [originalText]
+ * @returns {Promise<string>} original text when loading=true, empty string otherwise
+ */
+async function setButtonLoading(btn, loading, loadingText, originalText) {
+  if (loading) {
+    if (originalText === undefined) {
+      originalText = btn.textContent;
+    }
+    btn.disabled = true;
+    btn.classList.add("is-loading");
+    btn.setAttribute("aria-busy", "true");
+    btn.textContent = loadingText || "Working…";
+    // Two rAF to let browser paint the disabled state
+    await new Promise(resolve => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          resolve();
+        });
+      });
+    });
+    // Small delay to ensure spinner is visible before heavy work
+    await new Promise(resolve => setTimeout(resolve, 50));
+    return originalText;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove("is-loading");
+    btn.removeAttribute("aria-busy");
+    btn.textContent = originalText || btn.dataset.originalText || "OK";
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Shared metric helpers (provided)
 // ---------------------------------------------------------------------------
@@ -849,7 +885,7 @@ function renderTrainingCurve(container) {
   if (!target) return;
   if (!trainingHistory || trainingHistory.length === 0) {
     target.innerHTML =
-      '<p class="empty-state">No training history yet. Implement the <code>TODO(hw5)</code> functions and press &ldquo;Train&rdquo;.</p>';
+      '<p class="empty-state">No training history yet. Choose parameters and press &ldquo;Train&rdquo;.</p>';
     return;
   }
   let bestIndex = 0;
@@ -1024,25 +1060,57 @@ function init() {
   renderTrainingCurve();
 
   const testButton = document.getElementById("run-tests");
-  if (testButton) testButton.addEventListener("click", () => runTests());
+  if (testButton) {
+    testButton.addEventListener("click", async () => {
+      const originalText = await setButtonLoading(testButton, true, "Testing…");
+      try {
+        runTests();
+      } finally {
+        await setButtonLoading(testButton, false, null, originalText);
+      }
+    });
+  }
 
   const trainButton = document.getElementById("train");
-  if (trainButton) trainButton.addEventListener("click", runPipeline);
+  if (trainButton) {
+    trainButton.addEventListener("click", async () => {
+      const originalText = await setButtonLoading(trainButton, true, "Training…");
+      try {
+        runPipeline();
+      } finally {
+        await setButtonLoading(trainButton, false, null, originalText);
+      }
+    });
+  }
 
   const recommendButton = document.getElementById("recommend-btn");
   if (recommendButton) {
-    recommendButton.addEventListener("click", () => {
-      const select = document.getElementById("user-select");
-      renderTopK(select ? select.value : 1);
+    recommendButton.addEventListener("click", async () => {
+      const originalText = await setButtonLoading(recommendButton, true, "Computing…");
+      try {
+        const select = document.getElementById("user-select");
+        renderTopK(select ? select.value : 1);
+      } finally {
+        await setButtonLoading(recommendButton, false, null, originalText);
+      }
     });
   }
 
   const recallButton = document.getElementById("recall-btn");
-  if (recallButton) recallButton.addEventListener("click", () => renderRecall(10));
+  if (recallButton) {
+    recallButton.addEventListener("click", async () => {
+      const originalText = await setButtonLoading(recallButton, true, "Evaluating…");
+      try {
+        renderRecall(10);
+      } finally {
+        await setButtonLoading(recallButton, false, null, originalText);
+      }
+    });
+  }
 
   const status = document.getElementById("status");
   if (status) {
-    status.textContent = `Dataset ready: ${movies.length.toLocaleString("en-US")} movies, ${trainSet.length.toLocaleString("en-US")} train ratings on ${tfBackend || "tf"}. Implement the TODO(hw5) functions, then press \u201cTrain\u201d.`;
+    status.textContent = `Dataset ready: ${movies.length.toLocaleString("en-US")} movies, ${trainSet.length.toLocaleString("en-US")} train ratings on ${tfBackend || "tf"}. Press &ldquo;Train&rdquo; to start.`;
   }
 }
 
