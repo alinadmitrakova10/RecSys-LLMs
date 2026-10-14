@@ -735,6 +735,7 @@ function recallAtK(K = 10) {
   }
 
   const candidatePool = new Set(trainSet.map(r => r.movieId));
+  const testUserIds = new Set(testSet.map(r => r.userId));
 
   const relevantByUser = new Map();
   for (const r of testSet) {
@@ -750,7 +751,8 @@ function recallAtK(K = 10) {
   const usersWithoutRelevant = new Set();
   const perUser = [];
 
-  for (const [userId, relevantMovies] of relevantByUser) {
+  for (const userId of testUserIds) {
+    const relevantMovies = relevantByUser.get(userId) || [];
     const relevantCandidates = relevantMovies.filter(mid => candidatePool.has(mid));
     const unseenRelevant = relevantMovies.filter(mid => !candidatePool.has(mid));
 
