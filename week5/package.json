@@ -1,0 +1,16 @@
+{
+  "name": "week5",
+  "version": "1.0.0",
+  "description": "**Course**: LLM4Rec, HSE University\r **Instructor**: Seungmin Jin (sedzhin@hse.ru)\r **Repository**: https://github.com/dryjins/RecSys-LLMs/tree/main/week5\r **Task type**: Assignment (individual)",
+  "main": "data.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "playwright": "^1.64.0"
+  }
+}
