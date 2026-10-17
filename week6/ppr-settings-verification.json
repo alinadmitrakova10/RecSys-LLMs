@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-10-17T20:09:14.815Z",
+  "status": "passed",
+  "verification": {
+    "status": "passed",
+    "settings": [
+      {
+        "userId": 1,
+        "alpha": 0.85
+      },
+      {
+        "userId": 2,
+        "alpha": 0.85
+      },
+      {
+        "userId": 1,
+        "alpha": 0.5
+      }
+    ],
+    "recommendationRowsChecked": 30,
+    "uniqueWithinEachList": true,
+    "baselineComparisons": 2,
+    "trainHistoryRows": 266,
+    "trainOnlyProfilesChecked": true,
+    "cachedSourcesMatched": true,
+    "noPropagationOrEvaluation": true
+  },
+  "tamperChecks": [
+    "fourth setting",
+    "wrong user/alpha",
+    "duplicate/unfiltered IDs",
+    "wrong intersection",
+    "wrong mean popularity",
+    "wrong zero count",
+    "held-out profile label",
+    "wrong positive genre count",
+    "non-train profile sample"
+  ],
+  "csvAndMarkdownMatchJson": true,
+  "beforeReloadAudit": {
+    "propagationAttempts": 0,
+    "trainingAttempts": 0,
+    "selectionAttempts": 0,
+    "testEvaluationAttempts": 0
+  },
+  "afterReloadAudit": {
+    "propagationAttempts": 0,
+    "trainingAttempts": 0,
+    "selectionAttempts": 0,
+    "testEvaluationAttempts": 0
+  },
+  "previousFinalResultsVerifiedWithoutRerun": true,
+  "previousSelfChecks": {
+    "passed": 12,
+    "failed": 0,
+    "pending": 0
+  },
+  "protectedInputsUnchanged": true,
+  "pageErrors": []
+}

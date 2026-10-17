@@ -1,0 +1,250 @@
+{
+  "info": {
+    "factors": 16,
+    "epochs": 20,
+    "learningRate": 0.01,
+    "regularization": 0.05,
+    "batchSize": 64,
+    "seed": 20261013,
+    "backend": "webgl",
+    "checkpoint": 1,
+    "validationRMSE": 1.0295361235377753,
+    "testRMSE": 1.0774805105265595,
+    "trainedAt": "2026-10-17T14:34:15.504Z",
+    "loadedFrom": "new seeded retraining",
+    "runKind": "seeded-retraining-not-original-hw5-weights",
+    "history": [
+      {
+        "epoch": 1,
+        "trainRMSE": 0.8462486709967451,
+        "valRMSE": 1.0295361235377753
+      },
+      {
+        "epoch": 2,
+        "trainRMSE": 0.7445591428001054,
+        "valRMSE": 1.0333775623659376
+      },
+      {
+        "epoch": 3,
+        "trainRMSE": 0.7032590738261021,
+        "valRMSE": 1.050445503001465
+      },
+      {
+        "epoch": 4,
+        "trainRMSE": 0.6910312519279634,
+        "valRMSE": 1.0690800608887838
+      },
+      {
+        "epoch": 5,
+        "trainRMSE": 0.6828230082316545,
+        "valRMSE": 1.0773971975898728
+      },
+      {
+        "epoch": 6,
+        "trainRMSE": 0.6772984358645708,
+        "valRMSE": 1.0903355299009028
+      },
+      {
+        "epoch": 7,
+        "trainRMSE": 0.6754334497415944,
+        "valRMSE": 1.0983901099106361
+      },
+      {
+        "epoch": 8,
+        "trainRMSE": 0.6698037313044132,
+        "valRMSE": 1.1038093648565441
+      },
+      {
+        "epoch": 9,
+        "trainRMSE": 0.6685171497359235,
+        "valRMSE": 1.110266421366045
+      },
+      {
+        "epoch": 10,
+        "trainRMSE": 0.6667071022248172,
+        "valRMSE": 1.1154153813917707
+      },
+      {
+        "epoch": 11,
+        "trainRMSE": 0.6644878371656197,
+        "valRMSE": 1.1123293906559133
+      },
+      {
+        "epoch": 12,
+        "trainRMSE": 0.664549906756003,
+        "valRMSE": 1.127184442484796
+      },
+      {
+        "epoch": 13,
+        "trainRMSE": 0.6633112528814491,
+        "valRMSE": 1.1264057383679664
+      },
+      {
+        "epoch": 14,
+        "trainRMSE": 0.6628114472074659,
+        "valRMSE": 1.125202796459554
+      },
+      {
+        "epoch": 15,
+        "trainRMSE": 0.6616873056986707,
+        "valRMSE": 1.1282647762197395
+      },
+      {
+        "epoch": 16,
+        "trainRMSE": 0.6575507261558099,
+        "valRMSE": 1.1332713283145004
+      },
+      {
+        "epoch": 17,
+        "trainRMSE": 0.6586286714284624,
+        "valRMSE": 1.13079132771373
+      },
+      {
+        "epoch": 18,
+        "trainRMSE": 0.660742324617097,
+        "valRMSE": 1.1288070899154055
+      },
+      {
+        "epoch": 19,
+        "trainRMSE": 0.6563689033328318,
+        "valRMSE": 1.1342051397259285
+      },
+      {
+        "epoch": 20,
+        "trainRMSE": 0.6572956428669535,
+        "valRMSE": 1.1302638355227619
+      }
+    ],
+    "loadVerification": null,
+    "error": null,
+    "sourceCommit": "40a20cc59e6ce017f59a33ec18b5b224af875ce2",
+    "sourceBlob": "2d9bfb017b38bebcf7420b8e890709a3c2c358af",
+    "modelId": "hw5-40a20cc-seeded-retraining-v1",
+    "runId": "hw5-40a20cc-seeded-retraining-v1-1792247655504",
+    "tensorflowVersion": "4.22.0",
+    "runtimeMs": 837890.2000000477,
+    "datasetSignature": "339ed864fcc48687ec3efeca7adba3d51de7509af3ab831d191c35261ee14634"
+  },
+  "trainingRuns": 1,
+  "spec": {
+    "modelId": "hw5-40a20cc-seeded-retraining-v1",
+    "sourceCommit": "40a20cc59e6ce017f59a33ec18b5b224af875ce2",
+    "sourceBlob": "2d9bfb017b38bebcf7420b8e890709a3c2c358af",
+    "sourceFile": "week5/script.js",
+    "factors": 16,
+    "formula": "trainMean + dot(userFactors, itemFactors)",
+    "optimizer": "tf.train.adam(lr); other arguments use TensorFlow.js defaults",
+    "epochs": 20,
+    "lr": 0.01,
+    "reg": 0.05,
+    "batchSize": 64,
+    "regularization": "reg * (mean(square(gatheredUsers)) + mean(square(gatheredItems)))",
+    "initialization": {
+      "distribution": "tf.randomNormal",
+      "mean": 0,
+      "stddev": 0.05,
+      "userSeed": 20261013,
+      "itemSeed": 20261014
+    },
+    "shuffle": {
+      "algorithm": "mulberry32 + Fisher-Yates",
+      "seed": 20261015,
+      "resetOrderEachEpoch": true
+    },
+    "checkpointRule": "minimum validation RMSE; exact ties keep earliest epoch; restore factors",
+    "rmseClip": [
+      1,
+      5
+    ],
+    "rankingClip": null,
+    "runKind": "seeded-retraining-not-original-hw5-weights"
+  },
+  "data": {
+    "dataset": "MovieLens 100K",
+    "sourceFiles": [
+      "week6/u.data",
+      "week6/u.item"
+    ],
+    "hashFormat": "SHA-256 of UTF-8 JSON.stringify ordered parsed records",
+    "users": 943,
+    "movies": 1682,
+    "ratings": 100000,
+    "ratingsSha256": "f7d16d37fc66f5d3e31ed56bf83b82253caf65cb7c590a30653c145d2f512ec7",
+    "moviesSha256": "eef7ae85b471b1b10fbdcd62dea843de55e967345eb31a95a1ec80e1b5655c69",
+    "splitRule": "per user: timestamp asc, movieId asc; floor(0.8*n), floor(0.1*n), remainder test; skip n<5",
+    "splitCounts": {
+      "train": 79619,
+      "val": 9596,
+      "test": 10785
+    },
+    "splitHashes": {
+      "train": "dd446bf939be8f62400355e48e037205dee0fbe59164ede455260d9e5d5cf626",
+      "val": "4d739d9adf22f8841556d6bbc8e5c271863ef84d363e2c4896193dbd0259d887",
+      "test": "07a947e3efb9245395731315061517f90da10809983b174ba31f05e92c26d0e1"
+    },
+    "candidateCount": 1611,
+    "candidateIdsSha256": "8c51ddfe2774ae5acbf0830af47d78bb4c8b7ec4528b5974132d407aa20a88d7",
+    "userShape": [
+      944,
+      16
+    ],
+    "itemShape": [
+      1683,
+      16
+    ],
+    "indexing": "raw userId/movieId factor rows; reserved row 0 is not a candidate or graph node",
+    "trainMean": 3.5806026199776437,
+    "signature": "339ed864fcc48687ec3efeca7adba3d51de7509af3ab831d191c35261ee14634"
+  },
+  "checksum": "aeeb691932bebe73e7340a2b273c01ac4f4b453e51bb48689412ef580eb12760",
+  "coverage": {
+    "users": 943,
+    "candidates": 1611,
+    "finite": true
+  },
+  "fixtures": {
+    "analyticRawScore": 14,
+    "analyticClippedPrediction": 5,
+    "analyticRMSE": 1,
+    "batchLoss": 41.462501525878906,
+    "parityWithGit40a20cc": true,
+    "tinyBestEpoch": 1,
+    "checkpointRestored": true,
+    "initializationSeeded": true,
+    "indexedDBRoundtripMaxScoreError": 0,
+    "corruptionAndIncompatibleDataRejected": true,
+    "fullTrainingRuns": 0
+  },
+  "loadVerification": {
+    "maxScoreError": 0,
+    "scoreCount": 3222,
+    "validationRMSE": 1.0295361235377753,
+    "tolerance": 0.00001
+  },
+  "reload": {
+    "loadedFrom": "IndexedDB",
+    "trainingRuns": 0,
+    "runId": "hw5-40a20cc-seeded-retraining-v1-1792247655504",
+    "verification": {
+      "maxScoreError": 0,
+      "scoreCount": 3222,
+      "validationRMSE": 1.0295361235377753,
+      "tolerance": 0.00001
+    },
+    "tensors": 2
+  },
+  "portable": {
+    "loadedFrom": "mf-checkpoint.json",
+    "trainingRuns": 0,
+    "runId": "hw5-40a20cc-seeded-retraining-v1-1792247655504",
+    "verification": {
+      "maxScoreError": 0,
+      "scoreCount": 3222,
+      "validationRMSE": 1.0295361235377753,
+      "tolerance": 0.00001
+    }
+  },
+  "browser": "156.0.8078.4",
+  "noTestBasedSelection": true,
+  "oldRecallNotReused": true
+}

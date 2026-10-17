@@ -1,0 +1,81 @@
+{
+  "generatedAt": "2026-10-17T18:37:30.968Z",
+  "controlUserId": 1,
+  "alpha": 0.95,
+  "tolerance": 0.000001,
+  "maxIterations": 500,
+  "status": "passed",
+  "fullTestRecallRun": false,
+  "webgl": {
+    "backend": "webgl",
+    "iterations": 291,
+    "residual": 9.741643225424923e-7,
+    "converged": true,
+    "runtimeMs": 5883.400000095367
+  },
+  "cpu": {
+    "backend": "cpu",
+    "iterations": 284,
+    "residual": 9.967507139663212e-7,
+    "converged": true,
+    "runtimeMs": 3338.399999976158
+  },
+  "maxAbsScoreDifference": 6.984919309616089e-9,
+  "webglTop10": [
+    100,
+    258,
+    286,
+    318,
+    300,
+    288,
+    12,
+    313,
+    357,
+    483
+  ],
+  "cpuTop10": [
+    100,
+    258,
+    286,
+    318,
+    300,
+    288,
+    12,
+    313,
+    357,
+    483
+  ],
+  "sameTop10": true,
+  "runtimeMs": 9225,
+  "retries": [
+    {
+      "userId": 54,
+      "solver": "ordinary-ppr-cpu-retry",
+      "backend": "cpu",
+      "iterations": 284,
+      "residual": 9.808481991058215e-7,
+      "converged": true,
+      "runtimeMs": 2990.100000023842
+    },
+    {
+      "userId": 310,
+      "solver": "ordinary-ppr-cpu-retry",
+      "backend": "cpu",
+      "iterations": 284,
+      "residual": 9.9668341135839e-7,
+      "converged": true,
+      "runtimeMs": 2977.399999976158
+    },
+    {
+      "userId": 595,
+      "solver": "ordinary-ppr-cpu-retry",
+      "backend": "cpu",
+      "iterations": 285,
+      "residual": 9.74750037130434e-7,
+      "converged": true,
+      "runtimeMs": 3272.100000023842
+    }
+  ],
+  "tensorsBefore": 2,
+  "tensorsAfter": 2
+}

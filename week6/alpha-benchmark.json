@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-10-17T17:21:07.356Z",
+  "backend": "webgl",
+  "tensorflowVersion": "4.22.0",
+  "cohortSize": 846,
+  "runs": [
+    {
+      "userId": 1,
+      "alpha": 0.85,
+      "runtimeMs": 2027.2000000476837,
+      "iterations": 91,
+      "residual": 9.242157830158249e-7
+    },
+    {
+      "userId": 2,
+      "alpha": 0.85,
+      "runtimeMs": 1644.8999999761581,
+      "iterations": 89,
+      "residual": 8.743836588109843e-7
+    },
+    {
+      "userId": 943,
+      "alpha": 0.85,
+      "runtimeMs": 1655.1000000238419,
+      "iterations": 90,
+      "residual": 9.669265637057833e-7
+    }
+  ],
+  "meanScalarUserMs": 1775.733333349228,
+  "illustrativeGridEstimateMs": 6009081.600053787,
+  "estimateNote": "Extrapolation at alpha=0.85, not a measured grid time; alpha=0.95 can need more updates.",
+  "tensorsBefore": 2,
+  "tensorsAfter": 2,
+  "trainingRuns": 0
+}

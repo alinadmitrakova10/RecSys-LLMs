@@ -1,0 +1,5 @@
+alpha,validation_recall_at_10,cohort_size,runtime_seconds,backend,batch_size,converged_users,failed_users,min_iterations,max_iterations,max_residual,selected,status,excluded_unique_users,no_train,no_positive_train,mf_unavailable,no_eligible_relevant,overlap_users,unseen_relevant_records,total_runtime_seconds,evaluation_runtime_seconds,preparation_seconds,scalar_retry_users,cpu_retry_users,failed_attempts_retained
+0.5,0.11448315913208877,846,71.2365,webgl,16,846,0,21,22,9.994369065680075e-7,true,complete,97,0,1,0,97,1,4,3019.601099999785,3010.2606000000237,0.04259999990463257,0,0,0
+0.7,0.1047969507641043,846,157.8237999999523,webgl,16,846,0,41,42,9.999436088037328e-7,false,complete,97,0,1,0,97,1,4,3019.601099999785,3010.2606000000237,0.04259999990463257,0,0,0
+0.85,0.09002077155336492,846,341.9311999999285,webgl,16,846,0,88,95,9.997056622523814e-7,false,complete,97,0,1,0,97,1,4,3019.601099999785,3010.2606000000237,0.04259999990463257,0,0,0
+0.95,0.07375030387909676,846,2436.1233000000716,webgl+cpu,16,846,0,272,344,9.99983967631124e-7,false,complete,97,0,1,0,97,1,4,3019.601099999785,3010.2606000000237,0.04259999990463257,27,3,30

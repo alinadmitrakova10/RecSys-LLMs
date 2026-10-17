@@ -1,0 +1,41 @@
+{
+  "generatedAt": "2026-10-17T20:31:10.654Z",
+  "status": "passed",
+  "verification": {
+    "status": "passed",
+    "usersPerMethod": 861,
+    "methods": 4,
+    "recommendedRowsChecked": 34440,
+    "macroRecallsRecomputed": true,
+    "sharedCohortChecked": true,
+    "filtersOrderDuplicatesChecked": true,
+    "popularityAndTwoUserEvidenceChecked": true,
+    "alphaAndMfSettingsChecked": true,
+    "propagationRerun": false
+  },
+  "tamperChecks": [
+    "duplicate IDs",
+    "previously rated movie",
+    "ranking order",
+    "different cohort",
+    "wrong alpha",
+    "wrong MF checkpoint",
+    "wrong macro Recall",
+    "nonconverged user"
+  ],
+  "reloadAudit": {
+    "forbidPropagation": true,
+    "pageRank": 0,
+    "personalizedPageRank": 0,
+    "batchCreates": 0,
+    "batchCalls": 0,
+    "globalAlphas": [],
+    "batchAlphas": [],
+    "trainingAttempts": 0,
+    "alphaSelectionAttempts": 0
+  },
+  "noPropagationAfterRefresh": true,
+  "csvMatchesJson": true,
+  "protectedInputsUnchanged": true,
+  "pageErrors": []
+}

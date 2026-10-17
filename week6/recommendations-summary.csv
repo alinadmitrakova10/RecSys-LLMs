@@ -1,0 +1,9 @@
+method,user_id,alpha,mean_training_popularity,zero_score_count,common_movies_between_users,common_movie_ids
+popularity,1,,246.8,0,1,318
+popularity,2,,262.1,0,1,318
+pagerank,1,0.5,239.4,0,1,222
+pagerank,2,0.5,247.4,0,1,222
+ppr,1,0.5,228.4,0,1,475
+ppr,2,0.5,226.7,0,1,475
+mf,1,,104.2,0,1,169
+mf,2,,68.3,0,1,169

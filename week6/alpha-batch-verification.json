@@ -1,0 +1,466 @@
+{
+  "status": "passed",
+  "generatedAt": "2026-10-17T17:40:28.575Z",
+  "backend": "webgl",
+  "tensorflowVersion": "4.22.0",
+  "batchSize": 16,
+  "alphas": [
+    0.5,
+    0.7,
+    0.85,
+    0.95
+  ],
+  "sampledUsers": [
+    1,
+    2,
+    943
+  ],
+  "fixtureChecks": [
+    {
+      "fixture": "directed README",
+      "alpha": 0.5,
+      "seedNode": 0,
+      "maxError": 0
+    },
+    {
+      "fixture": "directed README",
+      "alpha": 0.5,
+      "seedNode": 1,
+      "maxError": 0
+    },
+    {
+      "fixture": "directed README",
+      "alpha": 0.5,
+      "seedNode": 3,
+      "maxError": 0
+    },
+    {
+      "fixture": "directed README",
+      "alpha": 0.7,
+      "seedNode": 0,
+      "maxError": 0
+    },
+    {
+      "fixture": "directed README",
+      "alpha": 0.7,
+      "seedNode": 1,
+      "maxError": 0
+    },
+    {
+      "fixture": "directed README",
+      "alpha": 0.7,
+      "seedNode": 3,
+      "maxError": 0
+    },
+    {
+      "fixture": "directed README",
+      "alpha": 0.85,
+      "seedNode": 0,
+      "maxError": 0
+    },
+    {
+      "fixture": "directed README",
+      "alpha": 0.85,
+      "seedNode": 1,
+      "maxError": 0
+    },
+    {
+      "fixture": "directed README",
+      "alpha": 0.85,
+      "seedNode": 3,
+      "maxError": 0
+    },
+    {
+      "fixture": "directed README",
+      "alpha": 0.95,
+      "seedNode": 0,
+      "maxError": 0
+    },
+    {
+      "fixture": "directed README",
+      "alpha": 0.95,
+      "seedNode": 1,
+      "maxError": 0
+    },
+    {
+      "fixture": "directed README",
+      "alpha": 0.95,
+      "seedNode": 3,
+      "maxError": 0
+    },
+    {
+      "fixture": "sparse IDs and isolates",
+      "alpha": 0.5,
+      "userId": 42,
+      "maxError": 0,
+      "scalarIterations": 21,
+      "batchIterations": 21
+    },
+    {
+      "fixture": "sparse IDs and isolates",
+      "alpha": 0.5,
+      "userId": 700,
+      "maxError": 0,
+      "scalarIterations": 1,
+      "batchIterations": 1
+    },
+    {
+      "fixture": "sparse IDs and isolates",
+      "alpha": 0.7,
+      "userId": 42,
+      "maxError": 0,
+      "scalarIterations": 41,
+      "batchIterations": 41
+    },
+    {
+      "fixture": "sparse IDs and isolates",
+      "alpha": 0.7,
+      "userId": 700,
+      "maxError": 0,
+      "scalarIterations": 1,
+      "batchIterations": 1
+    },
+    {
+      "fixture": "sparse IDs and isolates",
+      "alpha": 0.85,
+      "userId": 42,
+      "maxError": 0,
+      "scalarIterations": 89,
+      "batchIterations": 89
+    },
+    {
+      "fixture": "sparse IDs and isolates",
+      "alpha": 0.85,
+      "userId": 700,
+      "maxError": 0,
+      "scalarIterations": 1,
+      "batchIterations": 1
+    },
+    {
+      "fixture": "float32 threshold plateau (negative test)",
+      "alpha": 0.95,
+      "userId": 42,
+      "scalarResidual": 0.0000010728836059570312,
+      "batchResidual": 0.0000010728836059570312,
+      "iterations": 500,
+      "acceptedAsConverged": false,
+      "rankingRejected": true
+    },
+    {
+      "fixture": "sparse IDs and isolates",
+      "alpha": 0.95,
+      "userId": 700,
+      "maxError": 0,
+      "scalarIterations": 1,
+      "batchIterations": 1
+    }
+  ],
+  "liveChecks": [
+    {
+      "alpha": 0.5,
+      "userId": 1,
+      "maxAbsScoreDifference": 5.820766091346741e-10,
+      "sameTop10": true,
+      "scalarIterations": 22,
+      "batchIterations": 22,
+      "scalarResidual": 5.052477831668511e-7,
+      "batchResidual": 5.181344704396906e-7,
+      "recommendedIds": [
+        100,
+        258,
+        286,
+        12,
+        318,
+        357,
+        483,
+        222,
+        475,
+        9
+      ]
+    },
+    {
+      "alpha": 0.5,
+      "userId": 2,
+      "maxAbsScoreDifference": 3.4924596548080444e-10,
+      "sameTop10": true,
+      "scalarIterations": 21,
+      "batchIterations": 21,
+      "scalarResidual": 9.782843335415237e-7,
+      "batchResidual": 9.7876204563363e-7,
+      "recommendedIds": [
+        181,
+        300,
+        302,
+        313,
+        9,
+        7,
+        117,
+        98,
+        121,
+        174
+      ]
+    },
+    {
+      "alpha": 0.5,
+      "userId": 943,
+      "maxAbsScoreDifference": 4.656612873077393e-10,
+      "sameTop10": true,
+      "scalarIterations": 21,
+      "batchIterations": 21,
+      "scalarResidual": 9.454285532228823e-7,
+      "batchResidual": 9.483294434176059e-7,
+      "recommendedIds": [
+        1,
+        7,
+        258,
+        237,
+        183,
+        176,
+        89,
+        222,
+        357,
+        288
+      ]
+    },
+    {
+      "alpha": 0.7,
+      "userId": 1,
+      "maxAbsScoreDifference": 1.5133991837501526e-9,
+      "sameTop10": true,
+      "scalarIterations": 42,
+      "batchIterations": 42,
+      "scalarResidual": 8.04616320237983e-7,
+      "batchResidual": 7.896946954133455e-7,
+      "recommendedIds": [
+        100,
+        258,
+        286,
+        318,
+        12,
+        357,
+        483,
+        222,
+        288,
+        9
+      ]
+    },
+    {
+      "alpha": 0.7,
+      "userId": 2,
+      "maxAbsScoreDifference": 7.566995918750763e-10,
+      "sameTop10": true,
+      "scalarIterations": 41,
+      "batchIterations": 41,
+      "scalarResidual": 8.411144563069683e-7,
+      "batchResidual": 8.016680794753483e-7,
+      "recommendedIds": [
+        181,
+        300,
+        302,
+        313,
+        98,
+        7,
+        9,
+        174,
+        117,
+        121
+      ]
+    },
+    {
+      "alpha": 0.7,
+      "userId": 943,
+      "maxAbsScoreDifference": 1.1641532182693481e-9,
+      "sameTop10": true,
+      "scalarIterations": 41,
+      "batchIterations": 41,
+      "scalarResidual": 8.646956075608614e-7,
+      "batchResidual": 8.164386144926539e-7,
+      "recommendedIds": [
+        1,
+        258,
+        7,
+        237,
+        183,
+        176,
+        288,
+        89,
+        357,
+        222
+      ]
+    },
+    {
+      "alpha": 0.85,
+      "userId": 1,
+      "maxAbsScoreDifference": 1.1641532182693481e-9,
+      "sameTop10": true,
+      "scalarIterations": 91,
+      "batchIterations": 91,
+      "scalarResidual": 9.242157830158249e-7,
+      "batchResidual": 9.001105354400352e-7,
+      "recommendedIds": [
+        100,
+        258,
+        286,
+        318,
+        12,
+        357,
+        483,
+        288,
+        300,
+        222
+      ]
+    },
+    {
+      "alpha": 0.85,
+      "userId": 2,
+      "maxAbsScoreDifference": 8.149072527885437e-10,
+      "sameTop10": true,
+      "scalarIterations": 89,
+      "batchIterations": 89,
+      "scalarResidual": 8.743836588109843e-7,
+      "batchResidual": 9.03307409316767e-7,
+      "recommendedIds": [
+        181,
+        300,
+        98,
+        174,
+        313,
+        302,
+        7,
+        56,
+        117,
+        172
+      ]
+    },
+    {
+      "alpha": 0.85,
+      "userId": 943,
+      "maxAbsScoreDifference": 4.190951585769653e-9,
+      "sameTop10": true,
+      "scalarIterations": 90,
+      "batchIterations": 91,
+      "scalarResidual": 9.669265637057833e-7,
+      "batchResidual": 8.609922588220797e-7,
+      "recommendedIds": [
+        1,
+        258,
+        7,
+        286,
+        237,
+        288,
+        183,
+        300,
+        357,
+        89
+      ]
+    },
+    {
+      "alpha": 0.95,
+      "userId": 1,
+      "maxAbsScoreDifference": 1.6298145055770874e-9,
+      "sameTop10": true,
+      "scalarIterations": 291,
+      "batchIterations": 299,
+      "scalarResidual": 9.741643225424923e-7,
+      "batchResidual": 9.893901733448729e-7,
+      "recommendedIds": [
+        100,
+        258,
+        286,
+        318,
+        300,
+        288,
+        12,
+        313,
+        357,
+        483
+      ]
+    },
+    {
+      "alpha": 0.95,
+      "userId": 2,
+      "maxAbsScoreDifference": 1.1641532182693481e-9,
+      "sameTop10": true,
+      "scalarIterations": 277,
+      "batchIterations": 279,
+      "scalarResidual": 9.7866723081097e-7,
+      "batchResidual": 9.831519491854124e-7,
+      "recommendedIds": [
+        181,
+        98,
+        174,
+        300,
+        56,
+        172,
+        7,
+        313,
+        302,
+        117
+      ]
+    },
+    {
+      "alpha": 0.95,
+      "userId": 943,
+      "maxAbsScoreDifference": 4.6566128730773926e-9,
+      "sameTop10": true,
+      "scalarIterations": 280,
+      "batchIterations": 281,
+      "scalarResidual": 9.552268238621764e-7,
+      "batchResidual": 9.53850758378394e-7,
+      "recommendedIds": [
+        258,
+        1,
+        286,
+        7,
+        300,
+        288,
+        237,
+        313,
+        357,
+        183
+      ]
+    }
+  ],
+  "performance": [
+    {
+      "alpha": 0.5,
+      "scalarUsers": 3,
+      "scalarMeanUserMs": 588.0999999841055,
+      "batchUsers": 16,
+      "batchRuntimeMs": 1594.5999999046326,
+      "batchMeanUserMs": 99.66249999403954
+    },
+    {
+      "alpha": 0.7,
+      "scalarUsers": 3,
+      "scalarMeanUserMs": 870.9666666189829,
+      "batchUsers": 16,
+      "batchRuntimeMs": 2612.7000000476837,
+      "batchMeanUserMs": 163.29375000298023
+    },
+    {
+      "alpha": 0.85,
+      "scalarUsers": 3,
+      "scalarMeanUserMs": 1862.2666666905086,
+      "batchUsers": 16,
+      "batchRuntimeMs": 5771.299999952316,
+      "batchMeanUserMs": 360.70624999701977
+    },
+    {
+      "alpha": 0.95,
+      "scalarUsers": 3,
+      "scalarMeanUserMs": 5924.266666690509,
+      "batchUsers": 16,
+      "batchRuntimeMs": 20087.200000047684,
+      "batchMeanUserMs": 1255.4500000029802
+    }
+  ],
+  "independentConvergenceAndCapChecked": true,
+  "asynchronousFailureCleanupChecked": true,
+  "tieAndIncompleteGridChecked": true,
+  "tensorsBefore": 2,
+  "tensorsAfter": 2,
+  "runtimeMs": 74417.39999997616,
+  "trainingRuns": 0,
+  "fullTestRecallRun": false
+}

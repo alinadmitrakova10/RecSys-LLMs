@@ -1,0 +1,9 @@
+method,user_id,alpha,mean_training_popularity,zero_score_count,common_movies_between_users,score_meaning
+popularity,1,,246.8,0,1,distinct positive training users
+popularity,2,,262.1,0,1,distinct positive training users
+pagerank,1,0.85,244,0,0,long-run graph-walk probability
+pagerank,2,0.85,259.7,0,0,long-run graph-walk probability
+ppr,1,0.85,245.5,0,0,long-run graph-walk probability
+ppr,2,0.85,254.9,0,0,long-run graph-walk probability
+mf,1,,104.2,0,1,unclipped trainMean + dot product
+mf,2,,68.3,0,1,unclipped trainMean + dot product
