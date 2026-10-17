@@ -8,8 +8,8 @@
  *
  * This is a plain (classic) script, NOT an ES module. `index.html` loads, in
  * order: the TensorFlow.js CDN runtime, `vendor/d3.min.js`, `data.js`,
- * `graph.js` and finally this file. There are exactly five script tags and no
- * inline script, so the provided MF reference lives inside this file.
+ * The graph/batch, MF, retrieval/checks and saved-experiment controllers load
+ * before this file, as listed explicitly in index.html.
  *
  * Globals provided by `data.js` (read, never redefined here):
  *   `movies`   `[{ id, title, genres: string[] }]`
@@ -22,25 +22,25 @@
  *   `personalizedPageRank`, `GRAPH`, `setGraph`, `getGraph`,
  *   `renderGraphView`, `fixtureStep`, `fixtureReset`, `GRAPH_VIEW_STATE`
  *
- * WHAT THE STUDENT MUST IMPLEMENT (`TODO(hw6)`, each stub throws until written):
+ * IMPLEMENTED RETRIEVAL (shared protocol in retrieval.js):
  *   1. `movieScores(p, graph)`                   — movie-node scores, `graph.movieIds` order.
  *   2. `recommendTopK(method, userId, K, split)` — candidate pool, exclusions, tie-breaks.
  *   3. `recallAtK(method, K, split)`             — shared-cohort Recall@K plus exclusions.
  *
- * PROVIDED (instructor scaffolding — not an exercise to rewrite):
+ * APPLICATION SUPPORT:
  *   - `hw6InitTf`, the formatting/CSV/exporter helpers, the training-split indices,
- *     `popularityScores`, `mfScores` and the deterministic MF reference model,
+ *     `popularityScores`, `mfScores` and the seeded HW5 MF runtime,
  *     every panel renderer, the four-method / alpha-sweep / convergence /
  *     two-user-demo runners, the self-check harness and the UI wiring.
- *   - The MF reference is instructor-provided: students must not have to
- *     implement it. Report its selected checkpoint, not a hand-built model.
+ *   - MF reuses our final HW5 method from 40a20cc. Its seeded retraining and
+ *     persisted checkpoint are recorded explicitly; original HW5 weights are unavailable.
  *
  * Design notes:
  *   - The graph itself (transition matrix, PageRank, PPR, dangling-mass policy)
  *     lives in `graph.js`. This file never re-implements propagation for the
  *     product path; it calls `pageRank` / `personalizedPageRank` through the
- *     adapter below and treats an unrecognised call shape as an integration gap
- *     (reported PENDING), never as a failed check.
+ *     adapter below. Propagation errors and interface mismatches are failures,
+ *     never PENDING. Primary test evaluation uses the saved validation alpha.
  *   - PPR scores are long-run graph-walk probabilities. They are NOT purchase
  *     probabilities, NOT predicted ratings and NOT comparable in scale to MF
  *     scores. No rating RMSE is ever computed for PPR.
@@ -84,6 +84,8 @@
  * @property {number|null} iterations    Iterations performed, when reported.
  * @property {number|null} residual      Final L1 difference, when reported.
  * @property {boolean|null} converged    `true` only when the tolerance was met.
+ * @property {string|null} backend TensorFlow.js backend actually used.
+ * @property {number|null} runtimeMs Runtime of the underlying calculation.
  * @property {string} source             `"graph.js"` or `"reference"` (self-check path).
  */
 
@@ -106,35 +108,33 @@ const ALPHA_GRID = [0.50, 0.70, 0.85, 0.95];
 /** Rank cut-off used throughout the assignment. */
 const HW6_K = 10;
 
+/** Final TEST action is enabled; compatible saved results are always preferred. */
+const HW6_FULL_EXPERIMENTS_ENABLED = true;
+
 /**
- * Marker carried by every unimplemented stub error message.
- *
- * Named with the `HW6_` prefix (rather than the bare week5 `TODO_MARKER`) so a
- * same-named `const` in `graph.js` cannot cause a global-lexical redeclaration
- * `SyntaxError` that would take the whole page down. The convention value and
- * behaviour are unchanged: any error whose message carries this marker is
- * reported PENDING, never FAIL.
+ * Legacy marker understood by the error renderer. All self-check exceptions,
+ * including ones with this marker, are failures rather than PENDING.
  */
 const HW6_TODO_MARKER = "TODO(hw6)";
 
-/** Marker used for integration gaps; the harness maps it to PENDING. */
+/** Marker used for integration gaps; the harness reports them as failures. */
 const HW6_INTERFACE_MARK = "HW6_INTERFACE";
 
 /** Iteration cap and tolerance reported by the convergence panel (readme 3.4). */
 const HW6_MAX_ITERATIONS = 500;
 const HW6_TOLERANCE = 1e-6;
 
-/** Dimensionality of the provided MF reference model. */
+/** HW5 model from commit 40a20cc; this run is a seeded retraining. */
 const MF_FACTORS = 16;
 
-/** Fixed seed for the deterministic MF reference (reproducible initialisation). */
+/** Base seed: user initialization, item initialization +1, shuffle +2. */
 const MF_SEED = 20261013;
 
 /** Training settings, keeping the previous assignment's convention. */
-const MF_CONFIG = { epochs: 30, lr: 0.01, reg: 0.05, batchSize: 512 };
+const MF_CONFIG = Object.freeze({ epochs: 20, lr: 0.01, reg: 0.05, batchSize: 64 });
 
 /**
- * Public description of the provided MF reference model, filled in when the
+ * Public description of the HW5 MF retraining, filled in when the
  * model is trained. The report must state the model and checkpoint actually
  * used, so these fields are the record.
  *
@@ -159,7 +159,10 @@ const MF_INFO = {
   backend: null,
   checkpoint: null,
   validationRMSE: null,
+  testRMSE: null,
   trainedAt: null,
+  loadedFrom: null,
+  runKind: "seeded-retraining-not-original-hw5-weights",
   history: [],
 };
 
@@ -171,8 +174,8 @@ const MF_INFO = {
  */
 
 /**
- * Provided MF reference model, or `null` until the lazy `hw6EnsureMf()` has
- * actually trained it. Nothing MF-related runs on page load.
+ * HW5 MF model, or null until a compatible checkpoint is loaded or a new seeded
+ * run completes. Loading a checkpoint never counts as another training run.
  *
  * @type {MfModel|null}
  */
@@ -308,8 +311,7 @@ function hw6Genres(id) {
 }
 
 /**
- * Build the error used for an unrecognised `graph.js` interface shape. The
- * harness maps this to PENDING: it is an integration gap, not a wrong number.
+ * Build a diagnostic error for an invalid graph.js interface shape.
  *
  * @param {string} message
  * @returns {Error}
@@ -385,6 +387,8 @@ function hw6SetAlpha(value) {
 function hw6InvalidateCaches() {
   HW6_STATE.pageRank = null;
   HW6_STATE.ppr = null;
+  HW6_STATE.convergence = { pagerank: null, ppr: null };
+  HW6_STATE.lastVerification = null;
   const viewState = typeof GRAPH_VIEW_STATE !== "undefined" ? GRAPH_VIEW_STATE : null;
   if (viewState && typeof viewState === "object" && "stale" in viewState) {
     viewState.stale = true;
@@ -565,6 +569,22 @@ async function hw6InitTf() {
  * @returns {void}
  */
 function hw6BuildSplitIndices(split) {
+  if (typeof HW6_PPR_PROFILES !== "undefined") HW6_PPR_PROFILES.reset();
+  if (typeof HW6_TEST_COMPARISON !== "undefined") HW6_TEST_COMPARISON.reset();
+  if (typeof HW6_ALPHA_SELECTION !== "undefined") HW6_ALPHA_SELECTION.reset();
+  if (typeof HW6_RETRIEVAL !== "undefined") HW6_RETRIEVAL.reset();
+  if (typeof HW6_MF_ENGINE !== "undefined") HW6_MF_ENGINE.invalidateData();
+  HW6_STATE.recommendationRows = [];
+  HW6_STATE.recommendationKeys = new Set();
+  HW6_STATE.demo = null;
+  HW6_STATE.recallReport = null;
+  HW6_STATE.comparisonRows = null;
+  HW6_STATE.alphaSweepRows = null;
+  // Replace all split-specific maps: rebuilding must not retain old users/items.
+  HW6_STATE.pairsBySplit = { train: new Map(), val: new Map(), test: new Map() };
+  HW6_STATE.gradesBySplit = { train: new Map(), val: new Map(), test: new Map() };
+  hw6InvalidateCaches();
+  if (typeof setGraph === "function") setGraph(null);
   const names = ["train", "val", "test"];
   const movieIds = new Set();
   const userIds = new Set();
@@ -683,31 +703,15 @@ function hw6ExclusionSet(splitName, userId) {
  * positive training edge and at least one relevant movie remains eligible in
  * the split. Relevant means: rating `>= 4.0` in the split, the movie belongs to
  * the training candidate pool, and it passes that split's previously-rated
- * exclusion rule. The MF-scoring condition is in principle satisfiable for
- * every training-movie candidate, so it does not remove users here.
+ * exclusion rule. Actual MF scores for all train candidates must be available.
  *
  * All four methods must use exactly this cohort for the primary comparison.
  *
- * @param {string} splitName `"val"` or `"test"` (anything else is treated as `"test"`).
- * @returns {number[]} Ascending user ids.
+ * @param {string} splitName Exactly `"val"` or `"test"`; other values throw.
+ * @returns {Promise<number[]>} Verified ascending user ids, identical for all methods.
  */
-function hw6SharedCohort(splitName) {
-  const name = splitName === "val" ? "val" : "test";
-  const grades = HW6_STATE.gradesBySplit[name];
-  const cohort = [];
-  for (let i = 0; i < HW6_STATE.trainUserIds.length; i++) {
-    const userId = HW6_STATE.trainUserIds[i];
-    if (!HW6_STATE.usersWithPositiveTrain.has(userId)) continue;
-    const gradeMap = grades.get(userId);
-    if (!gradeMap) continue;
-    const excluded = hw6ExclusionSet(name, userId);
-    let relevant = 0;
-    gradeMap.forEach(function (rating, movieId) {
-      if (rating >= 4.0 && HW6_STATE.candidateSet.has(movieId) && !excluded.has(movieId)) relevant++;
-    });
-    if (relevant > 0) cohort.push(userId);
-  }
-  return cohort;
+async function hw6SharedCohort(splitName) {
+  return HW6_RETRIEVAL.sharedCohort(splitName);
 }
 
 /**
@@ -720,55 +724,14 @@ function hw6SharedCohort(splitName) {
  *            unseenIds:number[]}}
  */
 function hw6CohortExclusions(splitName) {
-  const name = splitName === "val" ? "val" : "test";
-  const grades = HW6_STATE.gradesBySplit[name];
-  let candidateUsers = 0;
-  let excludedNoPositiveEdge = 0;
-  let excludedNoEligible = 0;
-  let excludedUnseen = 0;
-  const unseen = new Set();
-
-  HW6_STATE.trainUserIds.forEach(function (userId) {
-    const gradeMap = grades.get(userId);
-    if (!gradeMap) return;
-    candidateUsers++;
-    if (!HW6_STATE.usersWithPositiveTrain.has(userId)) excludedNoPositiveEdge++;
-    const excluded = hw6ExclusionSet(name, userId);
-    let relevant = 0;
-    gradeMap.forEach(function (rating, movieId) {
-      if (rating < 4.0) return;
-      if (!HW6_STATE.candidateSet.has(movieId)) {
-        excludedUnseen++;
-        unseen.add(movieId);
-        return;
-      }
-      if (excluded.has(movieId)) return;
-      relevant++;
-    });
-    if (relevant === 0) excludedNoEligible++;
-  });
-
-  return {
-    candidateUsers: candidateUsers,
-    cohortSize: hw6SharedCohort(name).length,
-    excludedUnseen: excludedUnseen,
-    excludedNoEligible: excludedNoEligible,
-    excludedNoPositiveEdge: excludedNoPositiveEdge,
-    unseenIds: Array.from(unseen).sort(function (a, b) { return a - b; }),
-  };
+  return HW6_RETRIEVAL.protocol(splitName).exclusions;
 }
 
 // ---------------------------------------------------------------------------
-// Provided matrix-factorization reference (instructor scaffolding)
-//
-// A 16-dimensional dot-product MF with a global mean, trained on the same
-// chronological split, using `tf.train.adam`, checkpointed by validation RMSE
-// (ties resolved toward the earliest epoch). It is deterministic: factors are
-// initialised from a seeded PRNG and the mini-batch order is drawn from the same
-// generator, so two runs on the same data produce the same model.
-//
-// This block is NOT part of the homework stubs. Students report the checkpoint
-// recorded in `MF_INFO`; they do not rebuild the model.
+// HW5 MF adapters. The implementation in mf.js is derived from Git commit
+// 40a20cc, not the neighboring worktree or the instructor's former HW6 model.
+// Fixed seeds enable a new repeatable run on a fixed backend; they do not
+// reconstruct the unavailable historical HW5 factors.
 // ---------------------------------------------------------------------------
 
 /**
@@ -790,256 +753,91 @@ function hw6Mulberry32(seed) {
 }
 
 /**
- * Dispose the provided MF variables so repeated training does not leak memory.
+ * Release in-memory MF variables. Persisted factors remain available.
  *
  * @returns {void}
  */
 function hw6DisposeMf() {
-  if (!HW6_MF_MODEL) return;
-  try {
-    if (HW6_MF_MODEL.userFactors) HW6_MF_MODEL.userFactors.dispose();
-    if (HW6_MF_MODEL.itemFactors) HW6_MF_MODEL.itemFactors.dispose();
-  } catch (error) {
-    // Disposal is best-effort; the reference is replaced wholesale below.
-  }
+  if (HW6_MF_MODEL) tf.dispose([HW6_MF_MODEL.userFactors, HW6_MF_MODEL.itemFactors]);
   HW6_MF_MODEL = null;
 }
 
 /**
- * Batched training RMSE for a split, using the provided MF variables.
+ * HW5 batched RMSE: predictions are clipped to [1,5], ranking scores are not.
  *
  * @param {Rating[]} split
  * @returns {number} RMSE, or `NaN` when the model is unavailable.
  */
 function hw6MfRmse(split) {
-  if (!HW6_MF_MODEL || !split || split.length === 0) return Number.NaN;
-  const model = HW6_MF_MODEL;
-  return tf.tidy(function () {
-    const n = split.length;
-    const uRows = model.userFactors.shape[0];
-    const iRows = model.itemFactors.shape[0];
-    const userIds = new Int32Array(n);
-    const movieIds = new Int32Array(n);
-    const actual = new Float32Array(n);
-    for (let k = 0; k < n; k++) {
-      const row = split[k];
-      userIds[k] = Math.min(Math.max(0, row.userId), uRows - 1);
-      movieIds[k] = Math.min(Math.max(0, row.movieId), iRows - 1);
-      actual[k] = row.rating;
-    }
-    const u = tf.gather(model.userFactors, tf.tensor1d(userIds, "int32"));
-    const i = tf.gather(model.itemFactors, tf.tensor1d(movieIds, "int32"));
-    const pred = tf.sum(tf.mul(u, i), 1).add(model.globalMean);
-    const diff = pred.sub(tf.tensor1d(actual, "float32"));
-    return Math.sqrt(tf.mean(diff.square()).dataSync()[0]);
-  });
+  return HW6_MF_ENGINE.rmse(split, HW6_MF_MODEL);
 }
 
 /**
- * Train the provided MF reference at most once (idempotent, lazy). Nothing here
- * runs on page load: the first caller that actually needs MF scores triggers it,
- * and every later caller reuses the cached model.
- *
- * The training pass is asynchronous and `await`s the next animation frame after
- * every epoch, so the page keeps painting and the `#status` line can report
- * progress instead of freezing for minutes. Concurrent callers share one
- * in-flight promise, so a second need never starts a second training run.
- *
- * Deterministic; leaves the best-validation variables in place. `MF_INFO.trainedAt`
- * is set only on success, and `checkpoint` stays `null` while untrained.
- *
- * @returns {Promise<MfModel|null>} The trained model, or `null` when the data or
- *   the TensorFlow.js runtime is not ready, or when training throws.
+ * Load a compatible saved checkpoint only. Retrieval never starts training.
+ * Concurrent/repeated callers reuse the same promise/model. Errors are exposed.
+ * @returns {Promise<MfModel>} Selected model, never placeholder scores.
  */
 function hw6EnsureMf() {
   if (HW6_MF_TRAINING) return HW6_MF_TRAINING;
-  if (HW6_MF_MODEL && MF_INFO.trainedAt !== null) return Promise.resolve(HW6_MF_MODEL);
-  if (typeof tf === "undefined" || !HW6_STATE.splitReady) return Promise.resolve(null);
-  const train = HW6_SPLIT.train;
-  if (train.length === 0) return Promise.resolve(null);
-
-  HW6_MF_TRAINING = hw6TrainMf(train).then(
-    function (model) {
-      HW6_MF_TRAINING = null;
-      return model;
-    },
-    function (error) {
-      HW6_MF_TRAINING = null;
-      console.error("MF reference training failed:", error);
-      // Cover failures raised before the inner try (variable / tensor setup).
-      hw6DisposeMf();
-      MF_INFO.checkpoint = null;
-      MF_INFO.validationRMSE = null;
-      MF_INFO.trainedAt = null;
-      return null;
-    },
-  );
+  if (HW6_MF_MODEL && MF_INFO.checkpoint !== null) return Promise.resolve(HW6_MF_MODEL);
+  HW6_MF_TRAINING = Promise.resolve().then(async () => {
+    if (!HW6_STATE.splitReady) throw new Error("MF: data/split are not ready");
+    const key = HW6_MF_ENGINE.spec().modelId;
+    let payload = await HW6_MF_ENGINE.storage("get", key);
+    let source = "IndexedDB";
+    if (!payload) {
+      const response = await fetch("mf-checkpoint.json", { cache: "no-store" });
+      if (!response.ok) throw new Error(`MF: saved checkpoint unavailable (${response.status}); retraining is disabled`);
+      payload = await response.json();
+      source = "mf-checkpoint.json";
+    }
+    const model = await HW6_MF_ENGINE.load(payload, source);
+    if (source !== "IndexedDB") await HW6_MF_ENGINE.storage("put", key, payload);
+    return model;
+  }).finally(() => { HW6_MF_TRAINING = null; });
   return HW6_MF_TRAINING;
 }
 
 /**
- * The actual MF training loop used by `hw6EnsureMf`. Kept separate so the
- * in-flight promise is installed before the first `await`, which is what makes
- * concurrent first-needs share a single run.
- *
- * Uses `tf.tidy` per batch, disposes the scalar loss returned by
- * `optimizer.minimize`, and never puts an async callback inside `tf.tidy`.
- *
+ * Training entry point is disabled during retrieval preparation. The historical
+ * fixed-run implementation is retained unchanged in mf.js for provenance.
  * @param {Rating[]} train Training rows.
  * @returns {Promise<MfModel|null>}
  */
 async function hw6TrainMf(train) {
-  hw6DisposeMf();
-  const F = MF_FACTORS;
-  const userRows = Math.max(1, numUsers + 1);
-  const itemRows = Math.max(1, HW6_MAX_MOVIE_ID + 1);
-  const rand = hw6Mulberry32(MF_SEED);
-  const normal = function () {
-    const u = Math.max(rand(), 1e-12);
-    const v = rand();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-  };
-
-  const uData = new Float32Array(userRows * F);
-  for (let k = 0; k < uData.length; k++) uData[k] = normal() * 0.05;
-  const iData = new Float32Array(itemRows * F);
-  for (let k = 0; k < iData.length; k++) iData[k] = normal() * 0.05;
-
-  let globalMean = 0;
-  for (let i = 0; i < train.length; i++) globalMean += train[i].rating;
-  globalMean /= train.length;
-
-  const userFactors = tf.variable(tf.tensor2d(uData, [userRows, F]));
-  const itemFactors = tf.variable(tf.tensor2d(iData, [itemRows, F]));
-  HW6_MF_MODEL = { userFactors: userFactors, itemFactors: itemFactors, globalMean: globalMean };
-
-  const optimizer = tf.train.adam(MF_CONFIG.lr);
-  const order = new Int32Array(train.length);
-  for (let i = 0; i < order.length; i++) order[i] = i;
-
-  let bestVal = Infinity;
-  let bestEpoch = 0;
-  let bestU = null;
-  let bestI = null;
-  MF_INFO.history = [];
-
-  try {
-    for (let epoch = 1; epoch <= MF_CONFIG.epochs; epoch++) {
-      for (let i = order.length - 1; i > 0; i--) {
-        const j = Math.floor(rand() * (i + 1));
-        const tmp = order[i];
-        order[i] = order[j];
-        order[j] = tmp;
-      }
-      for (let start = 0; start < order.length; start += MF_CONFIG.batchSize) {
-        const end = Math.min(start + MF_CONFIG.batchSize, order.length);
-        const size = end - start;
-        const uIdx = new Int32Array(size);
-        const iIdx = new Int32Array(size);
-        const target = new Float32Array(size);
-        for (let k = 0; k < size; k++) {
-          const row = train[order[start + k]];
-          uIdx[k] = row.userId;
-          iIdx[k] = row.movieId;
-          target[k] = row.rating;
-        }
-        const cost = optimizer.minimize(
-          function () {
-            return tf.tidy(function () {
-              const u = tf.gather(userFactors, tf.tensor1d(uIdx, "int32"));
-              const it = tf.gather(itemFactors, tf.tensor1d(iIdx, "int32"));
-              const pred = tf.sum(tf.mul(u, it), 1).add(globalMean);
-              const mse = tf.losses.meanSquaredError(tf.tensor1d(target, "float32"), pred);
-              const l2 = userFactors.square().sum().add(itemFactors.square().sum()).mul(MF_CONFIG.reg);
-              return mse.add(l2);
-            });
-          },
-          true,
-          [userFactors, itemFactors],
-        );
-        if (cost) cost.dispose();
-      }
-
-      const trainRmse = hw6MfRmse(train);
-      const valRmse = hw6MfRmse(HW6_SPLIT.val);
-      MF_INFO.history.push({ epoch: epoch, trainRMSE: trainRmse, valRMSE: valRmse });
-      if (Number.isFinite(valRmse) && valRmse < bestVal) {
-        bestVal = valRmse;
-        bestEpoch = epoch;
-        bestU = userFactors.dataSync().slice();
-        bestI = itemFactors.dataSync().slice();
-      }
-
-      // Announce progress and hand control back to the browser so the UI paints
-      // between epochs instead of blocking the main thread.
-      hw6SetStatus(
-        "Training MF reference: epoch " + epoch + "/" + MF_CONFIG.epochs +
-        " \u2014 validation RMSE " + hw6Fmt(valRmse) + "\u2026",
-      );
-      if (typeof tf.nextFrame === "function") {
-        try {
-          await tf.nextFrame();
-        } catch (error) {
-          // Yielding is best-effort; training still completes without it.
-        }
-      }
-    }
-
-    if (bestU && bestI) {
-      tf.tidy(function () {
-        userFactors.assign(tf.tensor2d(bestU, [userRows, F]));
-        itemFactors.assign(tf.tensor2d(bestI, [itemRows, F]));
-      });
-    }
-
-    MF_INFO.factors = F;
-    MF_INFO.epochs = MF_CONFIG.epochs;
-    MF_INFO.learningRate = MF_CONFIG.lr;
-    MF_INFO.regularization = MF_CONFIG.reg;
-    MF_INFO.batchSize = MF_CONFIG.batchSize;
-    MF_INFO.seed = MF_SEED;
-    MF_INFO.backend = HW6_STATE.backend;
-    MF_INFO.checkpoint = bestEpoch || null;
-    MF_INFO.validationRMSE = Number.isFinite(bestVal) ? bestVal : null;
-    MF_INFO.trainedAt = new Date().toISOString();
-    return HW6_MF_MODEL;
-  } catch (error) {
-    console.error("MF reference training failed:", error);
-    hw6DisposeMf();
-    MF_INFO.checkpoint = null;
-    MF_INFO.validationRMSE = null;
-    MF_INFO.trainedAt = null;
-    return null;
-  }
+  throw new Error("MF training is disabled at this stage; load the saved checkpoint");
 }
 
 /**
- * Ensure the lazy MF reference is trained, reporting "not trained yet" honestly
- * when it cannot be (TensorFlow.js missing, data not ready, or a training
- * failure). This is the single entry point every MF need goes through; it never
- * trains on page load.
+ * Load/reuse saved HW5 MF; absent weights are an error, never a training trigger.
+ * Report failures without silently substituting another model.
  *
  * @returns {Promise<MfModel|null>}
  */
 async function hw6EnsureMfForNeed() {
-  if (HW6_MF_MODEL && MF_INFO.trainedAt !== null) return HW6_MF_MODEL;
   if (typeof tf === "undefined") return null;
   if (!HW6_STATE.splitReady) return null;
-  hw6SetStatus("MF reference is not trained yet \u2014 training it now\u2026");
-  const model = await hw6EnsureMf();
+  hw6SetStatus("Loading saved HW5 MF checkpoint (retraining disabled)...");
+  let model;
+  try { model = await hw6EnsureMf(); }
+  catch (error) {
+    hw6SetStatus("HW5 MF failed: " + error.message);
+    throw error;
+  }
   if (model && MF_INFO.checkpoint !== null) {
     hw6SetStatus(
-      "MF reference trained: " + MF_INFO.factors + " factors, checkpoint epoch " + MF_INFO.checkpoint +
-      ", validation RMSE " + hw6Fmt(MF_INFO.validationRMSE) + ".",
+      "HW5 MF seeded retraining (original weights unavailable): " + MF_INFO.factors +
+      " factors, checkpoint epoch " + MF_INFO.checkpoint + ", validation RMSE " +
+      hw6Fmt(MF_INFO.validationRMSE) + ", loaded from " + MF_INFO.loadedFrom + ".",
     );
   } else {
-    hw6SetStatus("MF reference is not trained yet \u2014 its scores and recall are not meaningful until it is.");
+    hw6SetStatus("HW5 MF is unavailable; no placeholder scores are reported.");
   }
   return model;
 }
 
 /**
- * Provided MF scorer: predicted scores for the training-movie candidate pool.
+ * HW5 raw MF scorer restricted to the shared training-movie candidate pool.
  *
  * Scores are dot products plus the global training mean, on the same scale as
  * the previous assignment's model. They are NOT comparable to PPR walk
@@ -1050,31 +848,12 @@ async function hw6EnsureMfForNeed() {
  *   untrained or the user row does not exist.
  */
 function mfScores(userId) {
-  const out = {};
-  const model = HW6_MF_MODEL;
-  if (!model) return out;
-  const uid = Math.round(Number(userId));
-  if (!Number.isFinite(uid) || uid < 0 || uid >= model.userFactors.shape[0]) return out;
-  const ids = HW6_STATE.candidateIds;
-  if (!ids.length) return out;
-  const F = model.userFactors.shape[1];
-  return tf.tidy(function () {
-    const idx = tf.tensor1d(Int32Array.from(ids), "int32");
-    const items = tf.gather(model.itemFactors, idx);
-    const userRow = model.userFactors.slice([uid, 0], [1, F]);
-    const dot = tf.matMul(items, userRow, false, true).squeeze();
-    const values = dot.add(model.globalMean).dataSync();
-    const result = {};
-    for (let i = 0; i < ids.length; i++) result[ids[i]] = values[i];
-    return result;
-  });
+  if (!HW6_MF_MODEL) return {};
+  return HW6_MF_ENGINE.scores(userId, HW6_STATE.candidateIds, HW6_MF_MODEL);
 }
 
 // ---------------------------------------------------------------------------
-// Student stubs (TODO(hw6))
-//
-// Each stub below throws until you implement it. Keep the signature, fill in the
-// body, and update the JSDoc contract notes if your design differs.
+// Shared retrieval entry points (implementation in retrieval.js).
 //
 // Provided helpers you will want:
 //   `HW6_STATE.candidateIds`  ascending training-movie ids (the candidate pool)
@@ -1088,7 +867,7 @@ function mfScores(userId) {
 /**
  * Extract movie-node scores from a full propagation vector.
  *
- * TODO(hw6): implement this. Readme section 5 requires movie-node scores only.
+ * Readme section 5 requires movie-node scores only.
  *
  * Contract:
  *  - `p` is the node-probability vector produced by `pageRank` /
@@ -1102,22 +881,20 @@ function mfScores(userId) {
  *    `p[userNodeCount + k]`.
  *  - Never add a padding node: the output length is exactly
  *    `graph.movieIds.length`.
- *  - Throw the `TODO(hw6)` error until implemented; do not return zeros, because
- *    a silent zero vector makes every downstream metric look valid when it is not.
+ *  - Invalid dimensions, mappings or movie probabilities throw; zero stays zero.
  *
  * @param {ArrayLike<number>} p Node probabilities, indexed by graph node index.
  * @param {Object} graph        Graph object from `graph.js`.
  * @returns {Float64Array} Movie scores in `graph.movieIds` order.
  */
 function movieScores(p, graph) {
-  // TODO(hw6): select the movie-node entries of `p`, in `graph.movieIds` order.
-  throw new Error("TODO(hw6): movieScores is not implemented yet.");
+  return HW6_RETRIEVAL.movieScores(p, graph);
 }
 
 /**
  * Recommend the top-K movies for a user with one of the four methods.
  *
- * TODO(hw6): implement this. Readme section 5 defines the rules.
+ * Readme section 5 defines the rules; invalid eligible scores throw explicitly.
  *
  * Contract:
  *  - `method` is one of `"popularity"`, `"pagerank"`, `"ppr"`, `"mf"`.
@@ -1145,17 +922,17 @@ function movieScores(p, graph) {
  * @param {number} userId Raw user id.
  * @param {number} [K=10]
  * @param {"val"|"test"} [split="test"]
- * @returns {RecommendedMovie[]}
+ * @param {{alpha?:number}} [options] Explicit alpha, otherwise captured from UI.
+ * @returns {Promise<RecommendedMovie[]>}
  */
-function recommendTopK(method, userId, K, split) {
-  // TODO(hw6): filter the candidate pool, sort by score desc / id asc, slice to K.
-  throw new Error("TODO(hw6): recommendTopK is not implemented yet.");
+async function recommendTopK(method, userId, K = 10, split = "test", options = {}) {
+  return HW6_RETRIEVAL.recommend(method, userId, K, split, options);
 }
 
 /**
  * Recall@K for one method over the shared evaluation cohort.
  *
- * TODO(hw6): implement this. Readme sections 7.1 and 7.2 define the protocol.
+ * Readme sections 7.1 and 7.2 define the protocol.
  *
  * Contract:
  *  - Cohort: use `hw6SharedCohort(split)` so all four methods report the exact
@@ -1178,21 +955,18 @@ function recommendTopK(method, userId, K, split) {
  * @param {"popularity"|"pagerank"|"ppr"|"mf"} method
  * @param {number} [K=10]
  * @param {"val"|"test"} [split="test"]
- * @returns {RecallReport}
+ * @param {{alpha?:number}} [options] Captured run settings, independent of UI changes.
+ * @returns {Promise<RecallReport>} Includes detailed overlapping exclusion reasons.
  */
-function recallAtK(method, K, split) {
-  // TODO(hw6): macro-average Recall@K over the shared cohort, with exclusions.
-  throw new Error("TODO(hw6): recallAtK is not implemented yet.");
+async function recallAtK(method, K = 10, split = "test", options = {}) {
+  return HW6_RETRIEVAL.recall(method, K, split, options);
 }
 
 // ---------------------------------------------------------------------------
 // graph.js integration adapter
 //
-// `graph.js` is authored independently against this page's contract. The shapes
-// below are the ones this adapter understands. Anything it cannot recognise is
-// raised as an `HW6_INTERFACE` error, which the harness reports as PENDING
-// rather than FAIL: an unknown call signature is an integration gap, not a wrong
-// number. Everything the adapter reads is documented in the handoff notes.
+// Async graph.js adapters use explicit graph snapshots, not global graph swaps.
+// Exceptions are preserved; invalid result shapes fail without signature retries.
 // ---------------------------------------------------------------------------
 
 /**
@@ -1314,8 +1088,8 @@ function hw6MovieNodeIndex(graph) {
 /**
  * Normalise whatever a propagation function returned into a `PropagationResult`.
  *
- * Accepts a bare vector or an object carrying `scores` / `p` / `probabilities`
- * (optionally with `iterations`, `residual` / `delta` / `l1`, `converged`).
+ * Requires an object carrying scores/p/probabilities, measured iteration count,
+ * residual and a consistent convergence flag at the default 1e-6 tolerance.
  * Returns `null` when the shape or the numbers cannot be trusted, so the caller
  * raises an interface error instead of computing with garbage.
  *
@@ -1336,8 +1110,8 @@ function hw6NormalizePropagation(out, n) {
     vector = out.scores || out.p || out.probabilities || out.vector || null;
     const itRaw = out.iterations !== undefined ? out.iterations : out.iters;
     const resRaw = out.residual !== undefined ? out.residual : out.delta !== undefined ? out.delta : out.l1;
-    iterations = Number.isFinite(Number(itRaw)) ? Number(itRaw) : null;
-    residual = Number.isFinite(Number(resRaw)) ? Number(resRaw) : null;
+    iterations = itRaw !== null && itRaw !== undefined && Number.isFinite(Number(itRaw)) ? Number(itRaw) : null;
+    residual = resRaw !== null && resRaw !== undefined && Number.isFinite(Number(resRaw)) ? Number(resRaw) : null;
     converged = typeof out.converged === "boolean" ? out.converged : null;
   }
   if (!vector || typeof vector.length !== "number") return null;
@@ -1345,13 +1119,19 @@ function hw6NormalizePropagation(out, n) {
   const size = n > 0 ? n : vector.length;
   if (vector.length !== size) return null;
   for (let i = 0; i < size; i++) {
-    if (!Number.isFinite(Number(vector[i]))) return null;
+    if (!Number.isFinite(Number(vector[i])) || Number(vector[i]) < 0) return null;
   }
+  if (!Number.isInteger(iterations) || iterations < 1 || iterations > HW6_MAX_ITERATIONS ||
+      residual === null || residual < 0 || converged !== (residual < HW6_TOLERANCE)) return null;
+  const mass = Array.from(vector).reduce(function (sum, value) { return sum + Number(value); }, 0);
+  if (Math.abs(mass - 1) > 1e-5) return null;
   return {
     scores: vector,
     iterations: iterations,
     residual: residual,
     converged: converged,
+    backend: out.backend || null,
+    runtimeMs: Number.isFinite(out.runtimeMs) ? out.runtimeMs : null,
     source: "graph.js",
   };
 }
@@ -1363,21 +1143,17 @@ function hw6NormalizePropagation(out, n) {
  *
  * @param {Object} graph
  * @param {() => any} fn
- * @returns {any}
+ * @returns {Promise<any>}
  */
-function hw6WithActiveGraph(graph, fn) {
+async function hw6WithActiveGraph(graph, fn) {
   const canSwap = typeof setGraph === "function" && typeof getGraph === "function";
   const previous = canSwap ? getGraph() : null;
   if (canSwap && previous !== graph) setGraph(graph);
   try {
-    return fn();
+    return await fn();
   } finally {
     if (canSwap && previous !== graph) {
-      try {
-        setGraph(previous);
-      } catch (error) {
-        // Restoring the previous graph is best-effort.
-      }
+      setGraph(previous);
     }
   }
 }
@@ -1385,101 +1161,52 @@ function hw6WithActiveGraph(graph, fn) {
 /**
  * Invoke `pageRank` for a specific graph and alpha.
  *
- * The real `graph.js` signature is `pageRank(alpha, opts)` reading the active
- * `GRAPH`, so the module-global form is tried first; a graph-first
- * `pageRank(graph, alpha)` shape is also tolerated.
- *
- * A `TODO(hw6)` throw from an unimplemented stub is propagated unchanged (the
- * harness turns it into PENDING). Only a genuinely unrecognised call shape
- * becomes `HW6_INTERFACE`.
+ * Pass an explicit graph to avoid global-state races during asynchronous reads.
+ * Preserve original errors; never retry a different alpha or call signature.
  *
  * @param {Object} graph
  * @param {number} alpha
- * @returns {PropagationResult}
- * @throws {Error} The stub's own `TODO(hw6)` error, or `HW6_INTERFACE`.
+ * @returns {Promise<PropagationResult>}
+ * @throws {Error} Solver errors or invalid output, both reported as FAIL.
  */
-function hw6AdapterPageRank(graph, alpha) {
+async function hw6AdapterPageRank(graph, alpha) {
   if (typeof pageRank !== "function") throw hw6InterfaceError("graph.js `pageRank` is unavailable");
-  const n = hw6NodeCount(graph);
-  const attempts = [
-    function () { return hw6WithActiveGraph(graph, function () { return pageRank(alpha); }); },
-  ];
-  if (pageRank.length >= 2) {
-    attempts.push(function () { return pageRank(graph, alpha); });
-  }
-
-  let lastMessage = "";
-  for (let i = 0; i < attempts.length; i++) {
-    try {
-      const normalized = hw6NormalizePropagation(attempts[i](), n);
-      if (normalized) return normalized;
-    } catch (error) {
-      const message = String(error && error.message ? error.message : error);
-      // An unimplemented stub is not an interface problem: surface it as-is.
-      if (message.indexOf(HW6_TODO_MARKER) !== -1) throw error;
-      lastMessage = message;
-    }
-  }
-  throw hw6InterfaceError("graph.js `pageRank` signature/return unrecognised" + (lastMessage ? " (" + lastMessage + ")" : ""));
+  const result = hw6NormalizePropagation(await pageRank(alpha, { graph }), hw6NodeCount(graph));
+  if (!result) throw hw6InterfaceError("pageRank returned invalid probabilities or convergence metadata");
+  return result;
 }
 
 /**
  * Invoke `personalizedPageRank` for a graph, seed node and alpha.
  *
- * The real `graph.js` signature is `personalizedPageRank(userId, alpha, opts)`
- * reading the active `GRAPH`, so the user-first form is tried first; a
- * graph-first `(graph, seed, alpha)` shape is also tolerated. The seed passed to
- * the user-first form is the raw user id (not a node index) when the graph
- * exposes one.
- *
- * A `TODO(hw6)` throw is propagated unchanged. Only an unrecognised call shape
- * becomes `HW6_INTERFACE`.
+ * The solver accepts a NODE INDEX. Raw user IDs are mapped by hw6RunPPR first.
+ * An optional raw ID is checked against that mapping, never passed as an index.
  *
  * @param {Object} graph
  * @param {number} seedNode Seed node index within the graph.
  * @param {number} alpha
- * @param {number} [seedUserId] Raw user id, when known; defaults to `seedNode`.
- * @returns {PropagationResult}
- * @throws {Error} The stub's own `TODO(hw6)` error, or `HW6_INTERFACE`.
+ * @param {number} [seedUserId] Raw user id, when known.
+ * @returns {Promise<PropagationResult>}
+ * @throws {Error} Solver errors or an inconsistent user/index mapping.
  */
-function hw6AdapterPPR(graph, seedNode, alpha, seedUserId) {
+async function hw6AdapterPPR(graph, seedNode, alpha, seedUserId) {
   if (typeof personalizedPageRank !== "function") {
     throw hw6InterfaceError("graph.js `personalizedPageRank` is unavailable");
   }
-  const n = hw6NodeCount(graph);
-  const users = hw6UserIds(graph);
-  const rawUserId = seedUserId === undefined || seedUserId === null
-    ? (seedNode >= 0 && seedNode < users.length ? users[seedNode] : seedNode)
-    : seedUserId;
-
-  const attempts = [
-    function () { return hw6WithActiveGraph(graph, function () { return personalizedPageRank(rawUserId, alpha); }); },
-  ];
-  if (personalizedPageRank.length >= 3) {
-    attempts.push(function () { return personalizedPageRank(graph, seedNode, alpha); });
+  if (seedUserId !== undefined && hw6UserNodeIndex(graph, seedUserId) !== seedNode) {
+    throw new Error("PPR: raw user ID does not match its restart node index");
   }
-  attempts.push(function () { return hw6WithActiveGraph(graph, function () { return personalizedPageRank(rawUserId); }); });
-
-  let lastMessage = "";
-  for (let i = 0; i < attempts.length; i++) {
-    try {
-      const normalized = hw6NormalizePropagation(attempts[i](), n);
-      if (normalized) return normalized;
-    } catch (error) {
-      const message = String(error && error.message ? error.message : error);
-      if (message.indexOf(HW6_TODO_MARKER) !== -1) throw error;
-      lastMessage = message;
-    }
-  }
-  throw hw6InterfaceError("graph.js `personalizedPageRank` signature/return unrecognised" + (lastMessage ? " (" + lastMessage + ")" : ""));
+  const result = hw6NormalizePropagation(await personalizedPageRank(seedNode, alpha, { graph }), hw6NodeCount(graph));
+  if (!result) throw hw6InterfaceError("PPR returned invalid probabilities or convergence metadata");
+  return result;
 }
 
 /**
  * Node index of a raw user id.
  *
  * Prefers graph.js's own mapping (`nodeOfUser`, then `userIndexOf` or the
- * `userIndex` alias), then the position inside `graph.userIds`, then the
- * `[0, userIds.length)` convention.
+ * `userIndex` alias), then the position inside `graph.userIds`. There is no
+ * numeric-ID fallback: an unknown raw ID is never interpreted as an index.
  *
  * @param {Object} graph
  * @param {number} userId
@@ -1505,8 +1232,7 @@ function hw6UserNodeIndex(graph, userId) {
   const users = hw6UserIds(graph);
   const position = users.indexOf(userId);
   if (position !== -1) return position;
-  const numeric = Number(userId);
-  return Number.isFinite(numeric) && numeric >= 0 && numeric < hw6NodeCount(graph) ? numeric : -1;
+  return -1;
 }
 
 /**
@@ -1514,12 +1240,12 @@ function hw6UserNodeIndex(graph, userId) {
  *
  * @param {Object} graph
  * @param {number} alpha
- * @returns {PropagationResult}
+ * @returns {Promise<PropagationResult>}
  */
-function hw6RunPageRank(graph, alpha) {
+async function hw6RunPageRank(graph, alpha) {
   const cached = HW6_STATE.pageRank;
   if (cached && cached.graph === graph && cached.alpha === alpha) return cached;
-  const result = hw6AdapterPageRank(graph, alpha);
+  const result = await hw6AdapterPageRank(graph, alpha);
   HW6_STATE.pageRank = { ...result, graph: graph, alpha: alpha };
   return HW6_STATE.pageRank;
 }
@@ -1531,14 +1257,14 @@ function hw6RunPageRank(graph, alpha) {
  * @param {Object} graph
  * @param {number} userId
  * @param {number} alpha
- * @returns {PropagationResult}
+ * @returns {Promise<PropagationResult>}
  */
-function hw6RunPPR(graph, userId, alpha) {
+async function hw6RunPPR(graph, userId, alpha) {
   const cached = HW6_STATE.ppr;
   if (cached && cached.graph === graph && cached.userId === userId && cached.alpha === alpha) return cached;
   const seedNode = hw6UserNodeIndex(graph, userId);
   if (seedNode < 0) throw hw6InterfaceError("cannot map user " + userId + " to a graph node");
-  const result = hw6AdapterPPR(graph, seedNode, alpha, userId);
+  const result = await hw6AdapterPPR(graph, seedNode, alpha, userId);
   HW6_STATE.ppr = { ...result, graph: graph, userId: userId, alpha: alpha };
   return HW6_STATE.ppr;
 }
@@ -1547,19 +1273,16 @@ function hw6RunPPR(graph, userId, alpha) {
  * Candidate-aligned score vector for one method (provided plumbing).
  *
  * Returns `{ movieIds, scores, propagation }` where `scores` is a `Float64Array`
- * aligned to `HW6_STATE.candidateIds`. Scores for movies the method cannot place
- * are `-Infinity`, so they sort last and never enter a top-K list by accident.
- *
- * `pagerank` / `ppr` route through `movieScores`, which is a student stub: this
- * helper therefore throws the `TODO(hw6)` error until the stub is implemented.
+ * aligned to HW6_STATE.candidateIds. Invalid/missing scores become NaN, never 0;
+ * recommendTopK rejects them explicitly if the candidate is eligible.
  *
  * @param {string} method
  * @param {number} userId
  * @param {number} alpha
  * @param {"val"|"test"} split
- * @returns {{movieIds:number[], scores:Float64Array, propagation:(PropagationResult|null)}}
+ * @returns {Promise<{movieIds:number[], scores:Float64Array, propagation:(PropagationResult|null)}>}
  */
-function hw6ScoreVector(method, userId, alpha, split) {
+async function hw6ScoreVector(method, userId, alpha, split) {
   const ids = HW6_STATE.candidateIds;
   const scores = new Float64Array(ids.length);
   if (!ids.length) return { movieIds: ids, scores: scores, propagation: null };
@@ -1573,14 +1296,14 @@ function hw6ScoreVector(method, userId, alpha, split) {
     const scored = mfScores(userId);
     for (let i = 0; i < ids.length; i++) {
       const value = scored[ids[i]];
-      scores[i] = value === undefined ? Number.NEGATIVE_INFINITY : value;
+      scores[i] = typeof value === "number" && Number.isFinite(value) ? value : NaN;
     }
     return { movieIds: ids, scores: scores, propagation: null };
   }
 
   const graph = hw6ActiveGraph();
   if (!graph) throw hw6InterfaceError("no graph is active; press \"Build graph\" first");
-  const propagation = method === "ppr" ? hw6RunPPR(graph, userId, alpha) : hw6RunPageRank(graph, alpha);
+  const propagation = await (method === "ppr" ? hw6RunPPR(graph, userId, alpha) : hw6RunPageRank(graph, alpha));
   // `movieScores` returns movie-node-relative entries, so the lookup here must
   // be the LOCAL movie index; using the global node index would skip the second
   // half of the movie array.
@@ -1588,8 +1311,8 @@ function hw6ScoreVector(method, userId, alpha, split) {
   const index = hw6MovieLocalIndex(graph);
   for (let i = 0; i < ids.length; i++) {
     const position = index.get(ids[i]);
-    const value = position === undefined ? NaN : Number(perMovie[position]);
-    scores[i] = Number.isFinite(value) ? value : Number.NEGATIVE_INFINITY;
+    const value = position === undefined ? NaN : perMovie[position];
+    scores[i] = typeof value === "number" && Number.isFinite(value) ? value : NaN;
   }
   return { movieIds: ids, scores: scores, propagation: propagation };
 }
@@ -1625,11 +1348,14 @@ function hw6MeanPopularity(recs) {
  * @returns {void}
  */
 function hw6RecordRecommendationRows(userId, method, alpha, recs) {
+  // Replace the whole list, including stale ranks from a previously longer list.
+  const alphaValue = alpha === null || alpha === undefined ? "" : Number(alpha).toFixed(2);
+  HW6_STATE.recommendationRows = HW6_STATE.recommendationRows.filter(row =>
+    !(row.userId === userId && row.method === method && row.alpha === alphaValue));
   for (let i = 0; i < recs.length; i++) {
     const rec = recs[i];
     const alphaKey = alpha === null || alpha === undefined ? "na" : Number(alpha).toFixed(2);
     const key = userId + "|" + method + "|" + alphaKey + "|" + (i + 1);
-    if (HW6_STATE.recommendationKeys.has(key)) continue;
     HW6_STATE.recommendationKeys.add(key);
     HW6_STATE.recommendationRows.push({
       userId: userId,
@@ -1641,6 +1367,8 @@ function hw6RecordRecommendationRows(userId, method, alpha, recs) {
       genres: Array.isArray(rec.genres) ? rec.genres.join(";") : "",
       score: rec.score,
       trainingPopularity: Number.isFinite(Number(rec.popularity)) ? rec.popularity : hw6PopularityOf(rec.movieId),
+      split: "test",
+      meanPopularity: hw6MeanPopularity(recs),
     });
   }
 }
@@ -1652,10 +1380,10 @@ function hw6RecordRecommendationRows(userId, method, alpha, recs) {
  * @param {Object} graph
  * @param {number} alpha
  * @param {number} [userId] Seed user for PPR.
- * @returns {PropagationResult}
+ * @returns {Promise<PropagationResult>}
  */
-function hw6RunAndRecordConvergence(kind, graph, alpha, userId) {
-  const result = kind === "ppr" ? hw6RunPPR(graph, userId, alpha) : hw6RunPageRank(graph, alpha);
+async function hw6RunAndRecordConvergence(kind, graph, alpha, userId) {
+  const result = await (kind === "ppr" ? hw6RunPPR(graph, userId, alpha) : hw6RunPageRank(graph, alpha));
   HW6_STATE.convergence[kind] = {
     alpha: alpha,
     userId: kind === "ppr" ? userId : null,
@@ -1663,6 +1391,8 @@ function hw6RunAndRecordConvergence(kind, graph, alpha, userId) {
     residual: result.residual,
     converged: result.converged,
     source: result.source,
+    backend: result.backend,
+    runtimeMs: result.runtimeMs,
     at: new Date().toISOString(),
   };
   return result;
@@ -1677,9 +1407,9 @@ function hw6RunAndRecordConvergence(kind, graph, alpha, userId) {
  */
 function hw6ConvergenceVerdict(record) {
   if (!record) return { value: null, derived: false };
-  if (typeof record.converged === "boolean") return { value: record.converged, derived: false };
-  if (Number.isFinite(record.residual)) return { value: record.residual < HW6_TOLERANCE, derived: true };
-  if (Number.isFinite(record.iterations)) return { value: record.iterations < HW6_MAX_ITERATIONS, derived: true };
+  if (Number.isFinite(record.residual) && record.residual >= 0) {
+    return { value: record.residual < HW6_TOLERANCE, derived: typeof record.converged !== "boolean" };
+  }
   return { value: null, derived: true };
 }
 
@@ -1692,93 +1422,33 @@ function hw6ConvergenceVerdict(record) {
  * validation-RMSE checkpoint, so the validation objectives differ and the
  * report must say so.
  *
- * The MF reference is trained lazily here (the comparison is the first place
- * that actually needs it). If it cannot be trained, the MF row keeps a `null`
- * recall plus an explicit note rather than a silent zero.
+ * HW5 MF and validation-selected alpha are loaded only. All methods share one
+ * list-generation pass for Recall and popularity; errors fail the comparison.
  *
  * @param {"test"|"val"} [split="test"] Evaluation split.
- * @returns {Promise<Array<Object>>} One row per method; rows carry an `error`
- *   field when the method could not be evaluated (unimplemented stub or
- *   interface gap).
+ * @returns {Promise<Object>} Complete/failed test experiment, or its saved copy.
  */
 async function hw6RunComparison(split) {
-  const name = split === "val" ? "val" : "test";
-  const alpha = hw6ReadAlpha();
-  const cohort = hw6SharedCohort(name);
-  const exclusions = hw6CohortExclusions(name);
-  const methods = ["popularity", "pagerank", "ppr", "mf"];
-  const rows = [];
-
-  // The four-method comparison needs MF, so this is a legitimate lazy trigger.
-  await hw6EnsureMfForNeed();
-  const mfReady = HW6_MF_MODEL !== null && MF_INFO.trainedAt !== null;
-
-  for (let m = 0; m < methods.length; m++) {
-    const method = methods[m];
-    const usesAlpha = method === "pagerank" || method === "ppr";
-    const row = {
-      method: method,
-      split: name,
-      alpha: usesAlpha ? alpha : null,
-      recall: null,
-      cohortSize: cohort.length,
-      excludedUnseen: exclusions.excludedUnseen,
-      excludedNoEligible: exclusions.excludedNoEligible,
-      meanPopularity: null,
-      iterations: null,
-      residual: null,
-      converged: null,
-      error: null,
-      note: null,
-    };
-    try {
-      if (method === "mf" && !mfReady) {
-        // Never report a silent 0: state plainly that the reference is untrained.
-        row.note = "MF not trained yet \u2014 its recall is not meaningful.";
-      } else {
-        const report = recallAtK(method, HW6_K, name);
-        row.recall = Number(report.recall);
-        if (Array.isArray(report.cohort)) row.cohortSize = report.cohort.length;
-        if (Number.isFinite(Number(report.excludedUnseen))) row.excludedUnseen = Number(report.excludedUnseen);
-        if (Number.isFinite(Number(report.excludedNoEligible))) row.excludedNoEligible = Number(report.excludedNoEligible);
-        row.meanPopularity = hw6MeanListPopularityForCohort(method, cohort, name, alpha);
-        const record = usesAlpha ? HW6_STATE.convergence[method === "ppr" ? "ppr" : "pagerank"] : null;
-        if (record) {
-          row.iterations = record.iterations;
-          row.residual = record.residual;
-          row.converged = hw6ConvergenceVerdict(record).value;
-        }
-      }
-    } catch (error) {
-      row.error = String(error && error.message ? error.message : error);
-    }
-    rows.push(row);
-  }
-
-  HW6_STATE.comparisonRows = rows;
-  return rows;
+  if (split && split !== "test") throw new Error("The final comparison evaluates test only; validation selection is already saved");
+  return HW6_TEST_COMPARISON.run();
 }
 
 /**
- * Mean over the cohort of each user's recommended-list mean popularity.
+ * Read the saved macro list popularity; never regenerate recommendations.
  *
  * @param {string} method
  * @param {number[]} cohort
  * @param {"test"|"val"} split
  * @param {number} alpha
- * @returns {number|null} `null` when no list could be produced.
+ * @returns {Promise<number>} Throws if a compatible one-pass result is absent.
  */
-function hw6MeanListPopularityForCohort(method, cohort, split, alpha) {
-  let total = 0;
-  let users = 0;
-  for (let i = 0; i < cohort.length; i++) {
-    const recs = recommendTopK(method, cohort[i], HW6_K, split);
-    const mean = hw6MeanPopularity(recs);
-    if (mean === null) continue;
-    total += mean;
-    users++;
+async function hw6MeanListPopularityForCohort(method, cohort, split, alpha) {
+  const saved = HW6_TEST_COMPARISON.result;
+  if (saved?.status !== "complete" || split !== "test" || JSON.stringify(cohort) !== JSON.stringify(saved.cohort)) {
+    throw new Error("Use the one-pass test comparison before requesting aggregate popularity");
   }
-  return users > 0 ? total / users : null;
+  if ((method === "ppr" || method === "pagerank") && alpha !== saved.alpha) throw new Error("Stored comparison alpha mismatch");
+  return saved.rows.find(row => row.method === method).meanPopularity;
 }
 
 /**
@@ -1788,35 +1458,10 @@ function hw6MeanListPopularityForCohort(method, cohort, split, alpha) {
  * The selected alpha maximises validation recall; exact ties are broken toward
  * the SMALLER alpha. Test outcomes are never consulted here.
  *
- * @returns {{rows:Array<Object>, best:(number|null), note:string}}
+ * @returns {Promise<{rows:Array<Object>, best:(number|null), note:string}>}
  */
-function hw6RunAlphaSweep() {
-  const rows = [];
-  let best = null;
-  let bestRecall = -Infinity;
-  let note = "";
-
-  for (let i = 0; i < ALPHA_GRID.length; i++) {
-    const alpha = ALPHA_GRID[i];
-    const row = { alpha: alpha, recall: null, cohortSize: hw6SharedCohort("val").length, error: null };
-    try {
-      const report = hw6WithAlpha(alpha, function () { return recallAtK("ppr", HW6_K, "val"); });
-      row.recall = Number(report.recall);
-      if (Array.isArray(report.cohort)) row.cohortSize = report.cohort.length;
-      if (Number.isFinite(row.recall) && row.recall > bestRecall) {
-        bestRecall = row.recall;
-        best = alpha;
-      }
-    } catch (error) {
-      row.error = String(error && error.message ? error.message : error);
-      note = row.error;
-    }
-    rows.push(row);
-  }
-
-  HW6_STATE.alphaSweepRows = rows;
-  HW6_STATE.alphaSweepNote = note;
-  return { rows: rows, best: best, note: note };
+async function hw6RunAlphaSweep(options = {}) {
+  return HW6_ALPHA_SELECTION.run(options);
 }
 
 /**
@@ -1826,14 +1471,14 @@ function hw6RunAlphaSweep() {
  *
  * @param {number} value
  * @param {() => any} fn
- * @returns {any}
+ * @returns {Promise<any>}
  */
-function hw6WithAlpha(value, fn) {
+async function hw6WithAlpha(value, fn) {
   const slider = document.getElementById("alpha");
   const previous = slider ? Number(slider.value) : 0.85;
   hw6SetAlpha(value);
   try {
-    return fn();
+    return await fn();
   } finally {
     hw6SetAlpha(previous);
   }
@@ -1842,87 +1487,29 @@ function hw6WithAlpha(value, fn) {
 /**
  * Two-user, one-factor-at-a-time PPR demonstration (readme section 6.2).
  *
- * Both users are drawn deterministically from the shared TEST cohort (the two
- * smallest ids) and are displayed. Three settings are shown: baseline
- * (user A, alpha 0.85), change the seed only (user B, alpha 0.85) and change
- * alpha only (user A, alpha 0.50). Exactly one factor changes per comparison.
- *
- * @returns {Object} `{ error, users, settings, common }`; `error` is set when
- *   the demonstration cannot run (unimplemented stub or a missing cohort).
+ * Current scope is a fixed-alpha preview for users 1 and 2 with all methods.
+ * The later controlled alpha-change experiment is not run by this entry point.
+ * @returns {Promise<Object>} Eight lists, popularity and overlap evidence.
  */
-function hw6RunTwoUserDemo() {
-  const cohort = hw6SharedCohort("test");
-  if (cohort.length < 2) {
-    return { error: "Need at least two users in the shared test cohort.", users: cohort, settings: [], common: [] };
-  }
-  const userA = cohort[0];
-  const userB = cohort[1];
-  const settings = [];
-  try {
-    settings.push({
-      label: "baseline",
-      user: userA,
-      alpha: 0.85,
-      changed: "nothing (reference setting)",
-      recs: hw6WithAlpha(0.85, function () { return recommendTopK("ppr", userA, HW6_K, "test"); }),
-    });
-    settings.push({
-      label: "change seed only",
-      user: userB,
-      alpha: 0.85,
-      changed: "restart user only",
-      recs: hw6WithAlpha(0.85, function () { return recommendTopK("ppr", userB, HW6_K, "test"); }),
-    });
-    settings.push({
-      label: "change alpha only",
-      user: userA,
-      alpha: 0.50,
-      changed: "alpha only",
-      recs: hw6WithAlpha(0.50, function () { return recommendTopK("ppr", userA, HW6_K, "test"); }),
-    });
-  } catch (error) {
-    return {
-      error: String(error && error.message ? error.message : error),
-      users: [userA, userB],
-      settings: settings,
-      common: [],
-    };
-  }
-
-  const common = [];
-  for (let i = 0; i < settings.length; i++) {
-    for (let j = i + 1; j < settings.length; j++) {
-      const left = settings[i];
-      const right = settings[j];
-      const set = new Set(left.recs.map(function (rec) { return rec.movieId; }));
-      let shared = 0;
-      right.recs.forEach(function (rec) { if (set.has(rec.movieId)) shared++; });
-      common.push({ pair: left.label + " vs " + right.label, shared: shared, of: HW6_K });
-    }
-  }
-
-  settings.forEach(function (setting) {
-    hw6RecordRecommendationRows(setting.user, "ppr", setting.alpha, setting.recs);
-  });
-
-  const demo = { error: null, users: [userA, userB], settings: settings, common: common };
-  HW6_STATE.demo = demo;
-  return demo;
+async function hw6RunTwoUserDemo() {
+  return HW6_RETRIEVAL.preview([1, 2], 0.85);
 }
 
 /**
  * Recommendations for the current controls (method, user, split), recorded for
  * export. Always uses the TEST split for the on-screen panel.
  *
- * @returns {{recs:RecommendedMovie[]}|{error:string}}
+ * @returns {Promise<{recs:RecommendedMovie[]}|{error:string}>}
  */
-function hw6CurrentRecommendations() {
+async function hw6CurrentRecommendations() {
   const method = hw6ReadMethod();
   const userId = hw6ReadNumber("user-select", Number.NaN);
   const alpha = hw6ReadAlpha();
   if (!Number.isFinite(userId)) return { error: "No target user selected." };
   try {
-    const recs = recommendTopK(method, userId, HW6_K, "test");
+    const cohort = await hw6SharedCohort("test");
+    if (!cohort.includes(userId)) throw new Error("Selected user is outside the verified common test cohort");
+    const recs = await recommendTopK(method, userId, HW6_K, "test", { alpha });
     hw6RecordRecommendationRows(userId, method, method === "pagerank" || method === "ppr" ? alpha : null, recs);
     return { recs: recs };
   } catch (error) {
@@ -1954,11 +1541,12 @@ function hw6RenderDatasetSummary() {
   const train = HW6_SPLIT.train;
   const val = HW6_SPLIT.val;
   const test = HW6_SPLIT.test;
-  const total = train.length + val.length + test.length;
   const users = HW6_STATE.trainUserIds.length;
   const movieCount = HW6_STATE.candidateIds.length;
-  const cells = (numUsers + 1) * (HW6_MAX_MOVIE_ID + 1);
-  const sparsity = cells > 0 ? 1 - total / cells : 0;
+  const loadedUsers = new Set(ratings.map(row => row.userId)).size;
+  const loadedMovies = new Set(movies.map(movie => movie.id)).size;
+  const cells = loadedUsers * loadedMovies;
+  const sparsity = cells > 0 ? 1 - ratings.length / cells : 0;
   const exclusions = typeof SPLIT_EXCLUSIONS === "undefined" ? [] : SPLIT_EXCLUSIONS;
 
   let zeroDegreeUsers = 0;
@@ -1981,9 +1569,11 @@ function hw6RenderDatasetSummary() {
     "<dt>Positive training interactions</dt><dd>" + HW6_STATE.positivePairs.toLocaleString("en-US") + "</dd>" +
     "<dt>Zero-degree users</dt><dd>" + zeroDegreeUsers.toLocaleString("en-US") + "</dd>" +
     "<dt>Zero-degree movies</dt><dd>" + zeroDegreeMovies.toLocaleString("en-US") + "</dd>" +
-    "<dt>Matrix sparsity</dt><dd>" + (sparsity * 100).toFixed(2) + "%</dd>" +
+    "<dt>Matrix sparsity (loaded users × movies, no padding)</dt><dd>" + (sparsity * 100).toFixed(2) + "%</dd>" +
     "</dl>" +
     '<p class="hint">' +
+    "Data validation passed: no invalid records, duplicate movie IDs or duplicate rating pairs. " +
+    "Loaded universe: " + loadedUsers + " users × " + loadedMovies + " movies. " +
     exclusions.length + " user(s) skipped while splitting. The split is chronological within each user, not globally time-consistent; " +
     "MovieLens records rating times, not viewing sessions. An unobserved rating is missing data, not a zero." +
     "</p>";
@@ -2126,7 +1716,12 @@ function hw6RenderConvergence() {
     "<th scope=\"col\">Final L1 residual</th><th scope=\"col\">Converged</th><th scope=\"col\">Cap</th></tr></thead>" +
     "<tbody>" + rows.join("") + "</tbody></table>" +
     '<p class="hint">Tolerance ' + HW6_TOLERANCE + ", cap " + HW6_MAX_ITERATIONS +
-    " iterations. Reaching the cap is not proof of convergence. PageRank is an iterative calculation, not neural-network training.</p>";
+    " iterations. Reaching the cap is not proof of convergence. PageRank is an iterative calculation, not neural-network training.</p>" +
+    '<p class="hint">' + keys.filter(key => HW6_STATE.convergence[key]).map(key => {
+      const record = HW6_STATE.convergence[key];
+      return hw6EscapeHtml(key) + ": backend " + hw6EscapeHtml(record.backend || "unknown") +
+        ", runtime " + hw6Fmt(record.runtimeMs, 1) + " ms";
+    }).join("; ") + "</p>";
 }
 
 /**
@@ -2136,46 +1731,7 @@ function hw6RenderConvergence() {
  * @returns {void}
  */
 function hw6RenderAlphaSweep(sweep) {
-  const target = document.getElementById("alpha-sweep-results");
-  if (!target) return;
-  const data = sweep || { rows: HW6_STATE.alphaSweepRows, best: null, note: HW6_STATE.alphaSweepNote || "" };
-  if (!data || !data.rows || data.rows.length === 0) {
-    target.innerHTML =
-      '<p class="empty-state">Validation Recall@10 for alpha in {0.50, 0.70, 0.85, 0.95} is reported here; ' +
-      "exact ties are broken by the smaller alpha.</p>";
-    return;
-  }
-  const failed = data.rows.some(function (row) { return !!row.error; });
-  if (failed) {
-    const first = data.rows.find(function (row) { return !!row.error; });
-    target.innerHTML = hw6UnavailableHtml("Alpha sweep", first.error);
-    return;
-  }
-
-  const body = data.rows
-    .map(function (row) {
-      const isBest = data.best !== null && Math.abs(row.alpha - data.best) < 1e-12;
-      return (
-        "<tr" + (isBest ? ' class="best-row"' : "") + ">" +
-        '<td class="num">' + hw6Fmt(row.alpha, 2) + "</td>" +
-        '<td class="num">' + hw6Fmt(row.recall) + "</td>" +
-        '<td class="num">' + row.cohortSize.toLocaleString("en-US") + "</td>" +
-        "<td>" + (isBest ? "selected (validation)" : "") + "</td>" +
-        "</tr>"
-      );
-    })
-    .join("");
-
-  target.innerHTML =
-    '<table class="data-table">' +
-    "<thead><tr><th scope=\"col\">Alpha</th><th scope=\"col\">Validation Recall@10</th>" +
-    "<th scope=\"col\">Cohort size</th><th scope=\"col\">Selection</th></tr></thead>" +
-    "<tbody>" + body + "</tbody></table>" +
-    '<p class="hint">Selected alpha: <strong>' +
-    (data.best === null ? "none" : hw6Fmt(data.best, 2)) +
-    "</strong> \u2014 chosen on validation only, exact ties toward the smaller alpha. The same alpha is used for the " +
-    "primary global PageRank comparison (a disclosed control, not an independent optimisation). MF keeps the previous " +
-    "validation-RMSE checkpoint rule, so MF and PPR use different validation objectives.</p>";
+  HW6_ALPHA_SELECTION.render(sweep);
 }
 
 /**
@@ -2185,6 +1741,7 @@ function hw6RenderAlphaSweep(sweep) {
  * @returns {void}
  */
 function hw6RenderComparison(rows) {
+  if (typeof HW6_TEST_COMPARISON !== "undefined") { HW6_TEST_COMPARISON.render(); return; }
   const target = document.getElementById("comparison-results");
   if (!target) return;
   const data = rows || HW6_STATE.comparisonRows;
@@ -2247,6 +1804,19 @@ function hw6RenderComparison(rows) {
 function hw6RunTwoUserDemoHtml(demo) {
   const data = demo || HW6_STATE.demo;
   if (!data) return "";
+  if (data.lists) {
+    return '<p class="hint">Users 1 and 2; fixed alpha 0.85, not validation-selected. ' +
+      'Graph scores are long-run walk probabilities, not ratings.</p>' +
+      data.lists.map(list => '<h4>' + hw6EscapeHtml(list.method) + ' — user ' + list.userId + '</h4>' +
+        '<p class="hint">Mean training popularity: ' + hw6Fmt(list.meanPopularity, 2) +
+        '; zero-score movies: ' + list.zeroScoreCount + '</p><ol class="recommendation-list">' +
+        list.recommendations.map(rec => '<li>' + hw6EscapeHtml(rec.title) + ' — id ' + rec.movieId +
+          '; ' + hw6EscapeHtml(rec.genres.join(', ')) + '; score ' + hw6Fmt(rec.score, 8) +
+          '; train popularity ' + rec.popularity + '</li>').join('') + '</ol>').join('') +
+      '<p class="hint">Common movies between users: ' + data.overlap.map(row =>
+        hw6EscapeHtml(row.method) + ': ' + row.count + '/10').join('; ') + '</p>' +
+      hw6CohortSummaryHtml(data.exclusions.test);
+  }
   if (data.error) {
     return hw6UnavailableHtml("Two-user demo", data.error);
   }
@@ -2304,72 +1874,76 @@ function hw6RunTwoUserDemoHtml(demo) {
 /**
  * Render the Top-10 recommendations table for the current controls.
  *
- * When the selected method is `mf` and the lazy reference has not been trained
- * yet, it is trained now (the first need for MF scores) before the list is
- * built. If it still cannot be produced, the panel says so explicitly.
+ * Verify the common cohort and await ranking. MF is loaded only from saved
+ * factors; any load, score or integration failure is reported explicitly.
  *
  * @returns {Promise<void>}
  */
 async function hw6RenderRecommendations() {
   const target = document.getElementById("recommendations");
   if (!target) return;
-  const method = hw6ReadMethod();
-  const alpha = hw6ReadAlpha();
-  if (method === "mf" && (HW6_MF_MODEL === null || MF_INFO.trainedAt === null)) {
-    await hw6EnsureMfForNeed();
-  }
-  if (method === "mf" && (HW6_MF_MODEL === null || MF_INFO.trainedAt === null)) {
-    target.innerHTML =
-      '<p class="empty-state">The provided MF reference is not trained yet and could not be trained, so its scores ' +
-      "are unavailable. Check the TensorFlow.js status above.</p>";
-    return;
-  }
-  const outcome = hw6CurrentRecommendations();
-  if (outcome.error) {
-    target.innerHTML = hw6UnavailableHtml("Recommendations", outcome.error);
-    return;
-  }
-  const recs = outcome.recs;
-  if (!recs || recs.length === 0) {
-    target.innerHTML = '<p class="empty-state">No eligible recommendations for this user.</p>';
-    return;
-  }
+  const unlock = hw6LockPropagationControls();
+  if (!unlock) return;
+  try {
+    const method = hw6ReadMethod();
+    const alpha = hw6ReadAlpha();
+    hw6SetStatus("Preparing recommendations and verifying the common cohort (no Recall run)...");
+    const outcome = await hw6CurrentRecommendations();
+    if (outcome.error) throw new Error(outcome.error);
+    hw6PopulateUserSelects();
+    const recs = outcome.recs;
+    if (!recs || recs.length === 0) {
+      target.innerHTML = '<p class="empty-state">No eligible recommendations for this user.</p>';
+      hw6SetStatus("No eligible recommendations for this user.");
+      return;
+    }
 
-  const body = recs
-    .map(function (rec, i) {
-      const genres = Array.isArray(rec.genres) && rec.genres.length ? rec.genres.join(", ") : "\u2014";
-      return (
-        "<tr>" +
+    const body = recs.map(function (rec, i) {
+      const genres = rec.genres.length ? rec.genres.join(", ") : "\u2014";
+      return "<tr>" +
         '<td class="num">' + (i + 1) + "</td>" +
         '<td class="num">' + rec.movieId + "</td>" +
         "<td>" + hw6EscapeHtml(rec.title) + "</td>" +
         "<td>" + hw6EscapeHtml(genres) + "</td>" +
-        '<td class="num">' + hw6Fmt(rec.score) + "</td>" +
-        '<td class="num">' + hw6PopularityOf(rec.movieId) + "</td>" +
-        "</tr>"
-      );
-    })
-    .join("");
+        '<td class="num">' + hw6Fmt(rec.score, 8) + "</td>" +
+        '<td class="num">' + rec.popularity + "</td></tr>";
+    }).join("");
+    const zeroScore = recs.some(rec => rec.score === 0);
 
-  const zeroScore = recs.some(function (rec) { return !(Number(rec.score) > 0); });
+    target.innerHTML =
+      '<p class="hint">Method <strong>' + hw6EscapeHtml(method) + "</strong>, alpha <strong>" + hw6Fmt(alpha, 2) +
+      "</strong>, test-split exclusions (training + validation rated movies).</p>" +
+      '<table class="data-table">' +
+      "<thead><tr><th scope=\"col\">Rank</th><th scope=\"col\">Movie id</th><th scope=\"col\">Title</th>" +
+      "<th scope=\"col\">Genres</th><th scope=\"col\">Score</th><th scope=\"col\">Training popularity</th></tr></thead>" +
+      "<tbody>" + body + "</tbody></table>" +
+      (recs.length < HW6_K
+        ? '<p class="hint">Fewer than ' + HW6_K + " eligible candidates exist for this user (" + recs.length + ").</p>"
+        : "") +
+      (zeroScore
+        ? '<p class="hint">Some listed candidates have a zero score: they were included only to fill the list and have not demonstrated relevance.</p>'
+        : "") +
+      (method === "ppr" || method === "pagerank"
+        ? '<p class="hint">These are graph-walk probabilities, not predicted ratings.</p>'
+        : "") + '<p class="hint">Mean training popularity: ' + hw6Fmt(hw6MeanPopularity(recs), 2) + '</p>' +
+        hw6CohortSummaryHtml(hw6CohortExclusions("test"));
+    hw6SetStatus("Top-10 ready; MF loaded from checkpoint; no full Recall or alpha selection run.");
+  } catch (error) {
+    target.innerHTML = hw6UnavailableHtml("Recommendations", error);
+    hw6SetStatus("Recommendations failed: " + error.message);
+  } finally { unlock(); }
+}
 
-  target.innerHTML =
-    '<p class="hint">Method <strong>' + hw6EscapeHtml(method) + "</strong>, alpha <strong>" + hw6Fmt(alpha, 2) +
-    "</strong>, test-split exclusions (training + validation rated movies).</p>" +
-    '<table class="data-table">' +
-    "<thead><tr><th scope=\"col\">Rank</th><th scope=\"col\">Movie id</th><th scope=\"col\">Title</th>" +
-    "<th scope=\"col\">Genres</th><th scope=\"col\">Score</th><th scope=\"col\">Training popularity</th></tr></thead>" +
-    "<tbody>" + body + "</tbody></table>" +
-    (recs.length < HW6_K
-      ? '<p class="hint">Fewer than ' + HW6_K + " eligible candidates exist for this user (" + recs.length + ").</p>"
-      : "") +
-    (zeroScore
-      ? '<p class="hint">Some listed candidates have a zero score: they were included only to fill the list and have ' +
-        "not demonstrated relevance.</p>"
-      : "") +
-    (method === "ppr" || method === "pagerank"
-      ? '<p class="hint">These are graph-walk probabilities, not predicted ratings.</p>'
-      : "");
+/** Reason counts are not additive; show their unique union explicitly. */
+function hw6CohortSummaryHtml(exclusions) {
+  return '<p class="hint">Verified common ' + hw6EscapeHtml(exclusions.split) + ' cohort: ' + exclusions.cohortSize +
+    '. Excluded users (unique union): ' + exclusions.excludedTotal +
+    '; no train: ' + exclusions.excludedNoTrain + '; no positive train edge: ' + exclusions.excludedNoPositiveEdge +
+    '; unavailable MF scores: ' + exclusions.excludedMfUnavailable +
+    '; no eligible relevant movies: ' + exclusions.excludedNoEligible +
+    '. Users with overlapping reasons: ' + exclusions.overlapUsers.length +
+    '. Reasons overlap and must not be summed. Relevant user-movie records outside train: ' +
+    exclusions.excludedUnseen + ' (' + exclusions.unseenDistinctMovies + ' distinct movies).</p>';
 }
 
 /**
@@ -2408,7 +1982,8 @@ function hw6RenderRecall(report, method, split) {
     (perUser.length > 50 ? '<p class="hint">Showing the first 50 of ' + perUser.length + " cohort users.</p>" : "") +
     '<p class="hint">Excluded: ' + (report.excludedUnseen || 0) + " relevant movie(s) absent from the training candidate pool; " +
     (report.excludedNoEligible || 0) + " user(s) without an eligible relevant movie. This is a warm-user evaluation and " +
-    "does not establish cold-start performance. No rating RMSE is computed for PPR.</p>";
+    "does not establish cold-start performance. No rating RMSE is computed for PPR.</p>" +
+    hw6CohortSummaryHtml(report.exclusions);
 }
 
 /**
@@ -2417,16 +1992,24 @@ function hw6RenderRecall(report, method, split) {
  * @returns {void}
  */
 function hw6PopulateUserSelects() {
-  const cohort = hw6SharedCohort("test");
+  const protocol = HW6_RETRIEVAL.protocol("test", true);
+  const cohort = protocol.cohort;
   const options = cohort.length
-    ? cohort.map(function (id) { return '<option value="' + id + '">User ' + id + "</option>"; }).join("")
+    ? cohort.map(function (id) { return '<option value="' + id + '">User ' + id +
+      (protocol.verified ? '' : ' (MF eligibility pending)') + "</option>"; }).join("")
     : '<option value="">No cohort users</option>';
   const userSelect = document.getElementById("user-select");
-  if (userSelect) userSelect.innerHTML = options;
+  if (userSelect) {
+    const previous = Number(userSelect.value);
+    userSelect.innerHTML = options;
+    if (cohort.includes(previous)) userSelect.value = String(previous);
+  }
   const seedSelect = document.getElementById("seed-user-select");
   if (seedSelect) {
+    const previous = Number(seedSelect.value);
     seedSelect.innerHTML = options;
-    if (cohort.length > 1) seedSelect.value = String(cohort[1]);
+    if (cohort.includes(previous)) seedSelect.value = String(previous);
+    else if (cohort.length > 1) seedSelect.value = String(cohort[1]);
   }
 }
 
@@ -2439,27 +2022,21 @@ function hw6PopulateUserSelects() {
 // ---------------------------------------------------------------------------
 
 /**
- * True when `graph.js`'s propagation helpers are actually implemented.
- *
- * Probes `rowNormalize(REFERENCE_GRAPH)` once and requires a usable
- * `{ Q: number[][], danglingMask: boolean[] }`. An unimplemented `TODO(hw6)`
- * stub, a throw, or an unusable return all count as "not ready", which makes the
- * dependent checks PENDING. This is what stops the harness from reporting PASS
- * for a formula it verified itself while the application's own implementation is
- * still a stub.
+ * Assert that block normalization is available. Failures are never converted
+ * into readiness=false/PENDING. Dispose the probe's owned tensors immediately.
  *
  * @returns {boolean}
  */
 function hw6GraphJsReady() {
-  if (typeof rowNormalize !== "function") return false;
+  if (typeof rowNormalize !== "function") throw new Error("rowNormalize is unavailable");
+  const result = rowNormalize(hw6MakeSyntheticGraph([[1, 1]]));
   try {
-    // A valid Graph in graph.js's documented shape. REFERENCE_GRAPH cannot be
-    // used here: it is the 4-node teaching fixture with `edges` but no `R`.
-    const probe = hw6MakeSyntheticGraph([[1, 1]]);
-    const result = rowNormalize(probe);
-    return !!(result && Array.isArray(result.Q) && result.Q.length === probe.nodeCount);
-  } catch (error) {
-    return false;
+    if (!result.userToMovie || !result.movieToUser || result.nodeCount !== 3) {
+      throw new Error("rowNormalize returned invalid tensor blocks");
+    }
+    return true;
+  } finally {
+    result.dispose();
   }
 }
 
@@ -2472,16 +2049,16 @@ function hw6GraphJsReady() {
  *
  * @param {number[][]} R `R[u][i]` 0/1.
  * @param {() => any} fn
- * @returns {any}
+ * @returns {Promise<any>}
  */
-function hw6WithSyntheticGraph(R, fn) {
+async function hw6WithSyntheticGraph(R, fn) {
   if (typeof setGraph !== "function" || typeof getGraph !== "function") {
     throw hw6InterfaceError("graph.js `setGraph` / `getGraph` are unavailable");
   }
   const previous = getGraph();
   setGraph(hw6MakeSyntheticGraph(R));
   try {
-    return fn();
+    return await fn();
   } finally {
     setGraph(previous);
   }
@@ -2594,36 +2171,28 @@ function hw6FixtureIterate(restartName, alpha) {
  * unchanged.
  *
  * @param {Object} graph
- * @returns {{rows:Array<Float64Array>, degrees:Float64Array, danglingMask:boolean[]}|null}
- *   `null` when `rowNormalize` is unavailable or returns an unusable shape.
+ * Only small verification fixtures (at most 32 nodes) may be densified here.
+ * MovieLens propagation never calls this independent checking helper.
+ * @returns {Promise<Object>} Dense rows for one-extra-update verification.
  */
-function hw6NormalizedFromGraph(graph) {
-  if (!graph || typeof rowNormalize !== "function") return null;
+async function hw6NormalizedFromGraph(graph) {
+  if (!graph || typeof rowNormalize !== "function") throw new Error("Missing graph or rowNormalize");
   const n = hw6NodeCount(graph);
-  if (!n) return null;
-  let result = null;
+  if (!n || n > 32) throw new Error("Dense verification is limited to small nonempty fixtures");
+  const result = rowNormalize(graph);
   try {
-    result = rowNormalize(graph);
-  } catch (error) {
-    return null;
-  }
-  if (!result || !Array.isArray(result.Q) || result.Q.length !== n) return null;
-  const mask = Array.isArray(result.danglingMask) ? result.danglingMask : null;
-  const rows = new Array(n);
-  const degrees = new Float64Array(n);
-  for (let i = 0; i < n; i++) {
-    const source = result.Q[i];
-    const row = new Float64Array(n);
-    let sum = 0;
-    for (let j = 0; j < n; j++) {
-      const raw = source && source[j] !== undefined ? Number(source[j]) : 0;
-      row[j] = Number.isFinite(raw) ? raw : 0;
-      sum += row[j];
+    const [um, mu] = await Promise.all([result.userToMovie.array(), result.movieToUser.array()]);
+    const rows = Array.from({ length: n }, () => new Float64Array(n));
+    for (let u = 0; u < graph.nUsers; u++) {
+      for (let i = 0; i < graph.nMovies; i++) {
+        rows[u][graph.nUsers + i] = um[u][i];
+        rows[graph.nUsers + i][u] = mu[i][u];
+      }
     }
-    rows[i] = row;
-    degrees[i] = mask ? (mask[i] ? 0 : 1) : sum > 0 ? 1 : 0;
+    return { rows, degrees: Float64Array.from(graph.degree), danglingMask: result.danglingMask };
+  } finally {
+    result.dispose();
   }
-  return { rows: rows, degrees: degrees, danglingMask: mask };
 }
 
 /**
@@ -2811,19 +2380,17 @@ function hw6LabelIndex(graph, label) {
  * `graph.js` fixture propagation stays available for the step demo, but the
  * harness must not use it here.
  *
- * A `TODO(hw6)` throw from the stub propagates unchanged, so the harness reports
- * PENDING; a missing `REFERENCE_GRAPH.transition` is an integration gap and is
- * raised as `HW6_INTERFACE` (also PENDING), never FAIL.
+ * Solver failures and invalid interfaces are reported as FAIL.
  *
  * @param {number} alpha Link-following probability.
- * @returns {PropagationResult} Length-4 vector with `source` naming the student call.
+ * @returns {Promise<PropagationResult>} Length-4 vector, source names the solver.
  */
-function hw6StudentReferencePageRank(alpha) {
+async function hw6StudentReferencePageRank(alpha) {
   if (typeof pageRank !== "function") throw hw6InterfaceError("graph.js `pageRank` is unavailable");
   const reference = typeof REFERENCE_GRAPH !== "undefined" ? REFERENCE_GRAPH : null;
   if (!reference) throw hw6InterfaceError("REFERENCE_GRAPH is not defined");
   if (!reference.transition) throw hw6InterfaceError("REFERENCE_GRAPH.transition is not available yet");
-  const out = pageRank(alpha, { transition: reference.transition });
+  const out = await pageRank(alpha, { transition: reference.transition });
   const result = hw6NormalizePropagation(out, 4);
   if (!result) throw hw6InterfaceError("graph.js `pageRank` did not return a length-4 vector for REFERENCE_GRAPH.transition");
   result.source = "student pageRank(alpha, {transition: REFERENCE_GRAPH.transition})";
@@ -2836,16 +2403,16 @@ function hw6StudentReferencePageRank(alpha) {
  *
  * @param {number} seedNode Seed node index (A = 0).
  * @param {number} alpha    Link-following probability.
- * @returns {PropagationResult} Length-4 vector with `source` naming the student call.
+ * @returns {Promise<PropagationResult>} Length-4 vector, source names the solver.
  */
-function hw6StudentReferencePPR(seedNode, alpha) {
+async function hw6StudentReferencePPR(seedNode, alpha) {
   if (typeof personalizedPageRank !== "function") {
     throw hw6InterfaceError("graph.js `personalizedPageRank` is unavailable");
   }
   const reference = typeof REFERENCE_GRAPH !== "undefined" ? REFERENCE_GRAPH : null;
   if (!reference) throw hw6InterfaceError("REFERENCE_GRAPH is not defined");
   if (!reference.transition) throw hw6InterfaceError("REFERENCE_GRAPH.transition is not available yet");
-  const out = personalizedPageRank(seedNode, alpha, { transition: reference.transition });
+  const out = await personalizedPageRank(seedNode, alpha, { transition: reference.transition });
   const result = hw6NormalizePropagation(out, 4);
   if (!result) {
     throw hw6InterfaceError("graph.js `personalizedPageRank` did not return a length-4 vector for REFERENCE_GRAPH.transition");
@@ -2857,16 +2424,15 @@ function hw6StudentReferencePPR(seedNode, alpha) {
 /**
  * Run the automated self-checks and write the log into `#self-checks`.
  *
- * Checks that reach an unimplemented stub, or that cannot resolve the `graph.js`
- * interface, are reported as PENDING rather than FAIL, so the harness is useful
- * both before and after the three stubs are implemented. The harness never
- * throws.
+ * Known-answer retrieval fixtures do not evaluate MovieLens Recall. All errors,
+ * missing interfaces and invalid output report FAIL; no PENDING is accepted.
  *
  * @param {HTMLElement|null} [logElement] Element that receives the text log.
- * @returns {{passed:number, failed:number, pending:number, checks:Array<Object>}}
+ * @returns {Promise<{passed:number, failed:number, pending:number, checks:Array<Object>}>}
  */
-function runSelfChecks(logElement) {
+async function runSelfChecks(logElement) {
   const checks = [];
+  const jobs = [];
   const close = function (a, b, eps) {
     const tolerance = eps === undefined ? 1e-6 : eps;
     return Math.abs(Number(a) - Number(b)) < tolerance;
@@ -2874,27 +2440,15 @@ function runSelfChecks(logElement) {
 
   const pass = function (name, detail) { checks.push({ name: name, status: "PASS", detail: detail }); };
   const fail = function (name, detail) { checks.push({ name: name, status: "FAIL", detail: detail }); };
-  const pending = function (name, detail) { checks.push({ name: name, status: "PENDING", detail: detail }); };
 
-  const check = function (name, fn) {
-    try {
-      const outcome = fn();
-      if (outcome && outcome.pending) pending(name, outcome.pending);
-      else pass(name, outcome === undefined ? "" : String(outcome));
-    } catch (error) {
-      const message = String(error && error.message ? error.message : error);
-      if (message.indexOf(HW6_TODO_MARKER) !== -1) pending(name, "TODO(hw6): not implemented yet.");
-      else if (message.indexOf(HW6_INTERFACE_MARK) !== -1) pending(name, "interface unavailable \u2014 " + message);
-      else fail(name, message);
-    }
-  };
+  const check = function (name, fn) { jobs.push({ name, fn }); };
 
   const reference = typeof REFERENCE_GRAPH !== "undefined" ? REFERENCE_GRAPH : null;
   const UNIFORM_REF = [0.3725268513, 0.1958239118, 0.3941492369, 0.0375];
   const RESTART_A_REF = [0.4522328999, 0.1921989825, 0.3555681176, 0];
 
   // 1. Reference graph, uniform restart (readme 4.1) — the STUDENT's pageRank.
-  check("reference graph: uniform alpha=0.85 matches readme 4.1 values", function () {
+  check("reference graph: uniform alpha=0.85 matches readme 4.1 values", async function () {
     if (!reference) throw hw6InterfaceError("REFERENCE_GRAPH is not defined");
     const readme = reference.reference && reference.reference.uniform ? reference.reference.uniform : null;
     const expected = readme && Array.isArray(readme.p) ? readme.p : UNIFORM_REF;
@@ -2902,7 +2456,7 @@ function runSelfChecks(logElement) {
     // Exercise the student's own implementation through the frozen interface.
     // There is deliberately NO fixture fallback here: a provided propagation
     // would let an untouched starter pass a readme 4.1 check it did not implement.
-    const result = hw6StudentReferencePageRank(0.85);
+    const result = await hw6StudentReferencePageRank(0.85);
 
     for (let i = 0; i < expected.length; i++) {
       if (!close(result.scores[i], expected[i], 1e-6)) {
@@ -2915,14 +2469,14 @@ function runSelfChecks(logElement) {
   });
 
   // 2. Reference graph, restart at A (readme 4.1) — the STUDENT's personalizedPageRank.
-  check("reference graph: restart at A alpha=0.85 matches readme 4.1 values", function () {
+  check("reference graph: restart at A alpha=0.85 matches readme 4.1 values", async function () {
     if (!reference) throw hw6InterfaceError("REFERENCE_GRAPH is not defined");
     const readme = reference.reference && reference.reference.restartAtA ? reference.reference.restartAtA : null;
     const expected = readme && Array.isArray(readme.p) ? readme.p : RESTART_A_REF;
     const expectedRanking = readme && Array.isArray(readme.ranking) ? readme.ranking.join(",") : "0,2,1,3";
     const seed = hw6LabelIndex(reference, "A");
     if (seed < 0) throw hw6InterfaceError("node index of A is unavailable on REFERENCE_GRAPH");
-    const result = hw6StudentReferencePPR(seed, 0.85);
+    const result = await hw6StudentReferencePPR(seed, 0.85);
 
     for (let i = 0; i < expected.length; i++) {
       if (!close(result.scores[i], expected[i], 1e-6)) {
@@ -2934,9 +2488,9 @@ function runSelfChecks(logElement) {
     return "A>C>B>D (D stays 0); produced by " + result.source;
   });
 
-  // 3. Row normalization (graph.js `rowNormalize(graph)` -> { Q, danglingMask }).
-  check("row normalization: every nonzero-degree row sums to 1", function () {
-    if (!hw6GraphJsReady()) return { pending: "graph.js `rowNormalize` is still a " + HW6_TODO_MARKER + " stub" };
+  // 3. Verify the normalized tensor blocks on small fixtures only.
+  check("row normalization: every nonzero-degree row sums to 1", async function () {
+    await tf.ready();
     // Two fixtures: a star with no zero-degree nodes, and one with two of them.
     const fixtures = [
       { R: [[1, 1]], dangling: [false, false, false] },
@@ -2946,14 +2500,11 @@ function runSelfChecks(logElement) {
     let dangling = 0;
     for (let f = 0; f < fixtures.length; f++) {
       const synthetic = hw6MakeSyntheticGraph(fixtures[f].R);
-      const result = rowNormalize(synthetic);
+      const result = await hw6NormalizedFromGraph(synthetic);
       const n = synthetic.nodeCount;
-      if (!result || !Array.isArray(result.Q) || result.Q.length !== n || !Array.isArray(result.danglingMask)) {
-        throw hw6InterfaceError("rowNormalize did not return { Q, danglingMask } for a synthetic graph");
-      }
       for (let i = 0; i < n; i++) {
         let sum = 0;
-        for (let j = 0; j < n; j++) sum += Number((result.Q[i] && result.Q[i][j]) || 0);
+        for (let j = 0; j < n; j++) sum += result.rows[i][j];
         if (!!result.danglingMask[i] !== fixtures[f].dangling[i]) {
           throw new Error("danglingMask[" + i + "] = " + result.danglingMask[i] + ", expected " + fixtures[f].dangling[i]);
         }
@@ -2986,40 +2537,29 @@ function runSelfChecks(logElement) {
   });
 
   // 5. Probability preservation, on the application's own pageRank.
-  check("iterations preserve total probability (sum approx 1)", function () {
+  check("iterations preserve total probability (sum approx 1)", async function () {
     // 1 user x 2 movies: user 1 rates both movies; both movie nodes point back.
-    const outcome = hw6WithSyntheticGraph([[1, 1]], function () {
-      const graph = hw6ActiveGraph();
-      return { graph: graph, n: hw6NodeCount(graph), result: hw6AdapterPageRank(graph, 0.85) };
-    });
-    let sum = 0;
-    for (let i = 0; i < outcome.result.scores.length; i++) sum += Number(outcome.result.scores[i]);
-    if (!close(sum, 1, 1e-6)) throw new Error("total mass = " + sum);
-    return "sum = " + sum.toFixed(10) + " over " + outcome.n + " synthetic nodes (" + outcome.result.source + ")";
+    const result = await pageRank(0.85, { graph: hw6MakeSyntheticGraph([[1, 1]]), trace: true });
+    for (const step of result.trace) {
+      if (!close(step.mass, 1, 1e-6)) throw new Error("iteration " + step.iteration + " mass = " + step.mass);
+    }
+    return result.trace.length + " updates preserve mass, not just the final vector";
   });
 
   // 6. Nonnegativity, on the application's own pageRank.
-  check("stationary scores are nonnegative", function () {
-    const outcome = hw6WithSyntheticGraph([[1, 1]], function () {
-      const graph = hw6ActiveGraph();
-      return { result: hw6AdapterPageRank(graph, 0.85) };
-    });
-    for (let i = 0; i < outcome.result.scores.length; i++) {
-      if (!(Number(outcome.result.scores[i]) >= 0)) throw new Error("node " + i + " = " + outcome.result.scores[i]);
+  check("stationary scores are nonnegative", async function () {
+    const result = await hw6AdapterPageRank(hw6MakeSyntheticGraph([[1, 1]]), 0.85);
+    for (let i = 0; i < result.scores.length; i++) {
+      if (!(Number(result.scores[i]) >= 0)) throw new Error("node " + i + " = " + result.scores[i]);
     }
-    return outcome.result.scores.length + " scores nonnegative (" + outcome.result.source + ")";
+    return result.scores.length + " scores nonnegative (" + result.source + ")";
   });
 
   // 7. Stationarity of one extra update, on the application's own pageRank.
-  check("one extra update produces approximately the same distribution", function () {
-    if (!hw6GraphJsReady()) return { pending: "graph.js `rowNormalize` is still a " + HW6_TODO_MARKER + " stub" };
+  check("one extra update produces approximately the same distribution", async function () {
     const synthetic = hw6MakeSyntheticGraph([[1, 1]]);
-    const normalized = hw6NormalizedFromGraph(synthetic);
-    if (!normalized) throw hw6InterfaceError("rowNormalize did not return a usable { Q, danglingMask }");
-    const result = hw6WithSyntheticGraph([[1, 1]], function () {
-      const graph = hw6ActiveGraph();
-      return hw6AdapterPageRank(graph, 0.85);
-    });
+    const normalized = await hw6NormalizedFromGraph(synthetic);
+    const result = await hw6AdapterPageRank(synthetic, 0.85);
     const n = synthetic.nodeCount;
     const next = hw6Step(0.85, normalized, hw6UniformRestart(n), result.scores);
     let l1 = 0;
@@ -3029,17 +2569,13 @@ function runSelfChecks(logElement) {
   });
 
   // 8. Zero-degree node fixture preserves mass.
-  check("zero-degree node fixture preserves probability mass", function () {
-    if (!hw6GraphJsReady()) {
-      return { pending: "graph.js `rowNormalize` is still a " + HW6_TODO_MARKER + " stub" };
-    }
+  check("zero-degree node fixture preserves probability mass", async function () {
     // 2 users x 3 movies: user 1 rates movies 1 and 2; user 2 has no positives;
     // movie 3 has no positives. Node order users-then-movies gives exactly two
     // zero-degree nodes (node 1 and node 4) and no padding node.
     const R = [[1, 1, 0], [0, 0, 0]];
     const synthetic = hw6MakeSyntheticGraph(R);
-    const normalized = hw6NormalizedFromGraph(synthetic);
-    if (!normalized) throw hw6InterfaceError("rowNormalize did not return a usable { Q, danglingMask }");
+    const normalized = await hw6NormalizedFromGraph(synthetic);
     const expectedDangling = [false, true, false, false, true];
     for (let i = 0; i < synthetic.nodeCount; i++) {
       if (!!normalized.danglingMask[i] !== expectedDangling[i]) {
@@ -3048,13 +2584,11 @@ function runSelfChecks(logElement) {
     }
     // The application's own PageRank and PPR must keep the total mass at 1 even
     // when a zero-degree node is seeded.
-    const outcome = hw6WithSyntheticGraph(R, function () {
-      const graph = hw6ActiveGraph();
-      return {
-        global: hw6AdapterPageRank(graph, 0.85),
-        seeded: hw6AdapterPPR(graph, 1, 0.85, 2),
-      };
-    });
+    const outcome = {
+      global: await hw6AdapterPageRank(synthetic, 0.85),
+      seeded: await hw6AdapterPPR(synthetic, 1, 0.85, 2),
+    };
+    if (!close(outcome.seeded.scores[1], 1, 1e-6)) throw new Error("isolated seed must retain all mass");
     let globalSum = 0;
     let seededSum = 0;
     for (let i = 0; i < synthetic.nodeCount; i++) {
@@ -3067,21 +2601,14 @@ function runSelfChecks(logElement) {
   });
 
   // 9. Matrix orientation / graph direction.
-  check("matrix orientation: probability collects at the pointed-to node, not the source", function () {
-    if (!hw6GraphJsReady()) {
-      return { pending: "graph.js `rowNormalize` is still a " + HW6_TODO_MARKER + " stub" };
-    }
+  check("matrix orientation: probability collects at the pointed-to node, not the source", async function () {
     // 1 user x 2 movies, both movies pointed to by the user and both pointing
     // back to it. The user node is the hub, so P^T must give it the largest
     // stationary mass; an untransposed update would make the movies win.
     const synthetic = hw6MakeSyntheticGraph([[1, 1]]);
-    const normalized = hw6NormalizedFromGraph(synthetic);
-    if (!normalized) throw hw6InterfaceError("rowNormalize did not return a usable { Q, danglingMask }");
+    const normalized = await hw6NormalizedFromGraph(synthetic);
     const n = synthetic.nodeCount;
-    const fromApp = hw6WithSyntheticGraph([[1, 1]], function () {
-      const graph = hw6ActiveGraph();
-      return Array.from(hw6AdapterPageRank(graph, 0.85).scores).map(Number);
-    });
+    const fromApp = Array.from((await hw6AdapterPageRank(synthetic, 0.85)).scores);
     const fromReference = Array.from(hw6ReferenceIterate(normalized, 0.85, hw6UniformRestart(n)).scores);
     const pairs = [fromApp, fromReference];
     for (let k = 0; k < pairs.length; k++) {
@@ -3100,30 +2627,10 @@ function runSelfChecks(logElement) {
     return "p = [" + fromApp.map(function (x) { return x.toFixed(6); }).join(", ") + "]";
   });
 
-  // 10. Recommendation filtering and tie-break.
-  check("recommendTopK: excludes previously rated movies and breaks ties by ascending id", function () {
-    if (!HW6_STATE.splitReady) throw hw6InterfaceError("the training split is not available");
-    const cohort = hw6SharedCohort("test");
-    if (cohort.length === 0) {
-      return { pending: "the shared test cohort is empty for this dataset, so no user can be checked" };
-    }
-    const userId = cohort[0];
-    const recs = recommendTopK("popularity", userId, HW6_K, "test");
-    if (!Array.isArray(recs)) throw new Error("expected an array of recommendations");
-    if (recs.length > HW6_K) throw new Error("returned " + recs.length + " items for K=" + HW6_K);
-    const excluded = hw6ExclusionSet("test", userId);
-    for (let i = 0; i < recs.length; i++) {
-      if (excluded.has(recs[i].movieId)) throw new Error("movie " + recs[i].movieId + " was rated by the user and must be excluded");
-      if (!HW6_STATE.candidateSet.has(recs[i].movieId)) throw new Error("movie " + recs[i].movieId + " is outside the training candidate pool");
-      if (i > 0) {
-        const prev = recs[i - 1];
-        if (Number(prev.score) < Number(recs[i].score)) throw new Error("results are not sorted by descending score");
-        if (Number(prev.score) === Number(recs[i].score) && !(prev.movieId < recs[i].movieId)) {
-          throw new Error("tie between " + prev.movieId + " and " + recs[i].movieId + " is not broken by ascending id");
-        }
-      }
-    }
-    return recs.length + " eligible items for user " + userId;
+  // 10. Known answers only: never evaluate MovieLens Recall through self-checks.
+  check("retrieval: known-answer extraction, ranking, macro Recall and exclusions", async function () {
+    const result = await HW6_RETRIEVAL_CHECKS.run();
+    return result.checks.join("; ");
   });
 
   // 11. No padding node.
@@ -3140,9 +2647,8 @@ function runSelfChecks(logElement) {
       throw new Error("graph reports " + nodes + " nodes but observed users + movies = " + observed + " (a padding node?)");
     }
     if (nodes < observed) {
-      // A fixture / step view legitimately activates a smaller reference graph;
-      // that is not evidence of a padding node, so this is not a failure.
-      return { pending: "the active graph has " + nodes + " nodes, fewer than the " + observed + " dataset nodes (a fixture view may be active)" };
+      // A dataset mapping check must fail on a smaller universe as well.
+      throw new Error("active graph has " + nodes + " nodes, expected " + observed);
     }
     const graphMovies = hw6MovieIds(graph).length;
     const graphUsers = hw6UserIds(graph).length;
@@ -3168,6 +2674,17 @@ function runSelfChecks(logElement) {
     return required.length + " functions + ALPHA_GRID + MF_INFO";
   });
 
+  for (const job of jobs) {
+    try {
+      const outcome = await job.fn();
+      if (outcome && outcome.pending) throw new Error(outcome.pending);
+      pass(job.name, outcome === undefined ? "" : String(outcome));
+    } catch (error) {
+      const message = String(error && error.message ? error.message : error);
+      fail(job.name, message);
+    }
+  }
+
   const passed = checks.filter(function (c) { return c.status === "PASS"; }).length;
   const failed = checks.filter(function (c) { return c.status === "FAIL"; }).length;
   const pendingCount = checks.filter(function (c) { return c.status === "PENDING"; }).length;
@@ -3175,7 +2692,7 @@ function runSelfChecks(logElement) {
   const lines = [
     "HW6 self-checks \u2014 pass " + passed + ", fail " + failed + ", pending " + pendingCount + " (of " + checks.length + ")",
     "backend: " + (HW6_STATE.backend || "unknown"),
-    "MF reference: " + (MF_INFO.checkpoint === null ? "not trained yet" : "factors " + MF_INFO.factors + ", checkpoint epoch " + MF_INFO.checkpoint + ", val RMSE " + hw6Fmt(MF_INFO.validationRMSE)),
+    "HW5 MF (seeded retraining): " + (MF_INFO.checkpoint === null ? "not loaded/trained yet" : "factors " + MF_INFO.factors + ", checkpoint epoch " + MF_INFO.checkpoint + ", val RMSE " + hw6Fmt(MF_INFO.validationRMSE)),
     "",
   ];
   checks.forEach(function (c) {
@@ -3198,12 +2715,12 @@ function runSelfChecks(logElement) {
 /**
  * Machine-readable self-check export.
  *
- * @returns {string} JSON text with `backend`, `generated_at`, `checks`,
+ * @returns {Promise<string>} JSON text with `backend`, `generated_at`, `checks`,
  *   `passed`, `failed` and `pending`. Runs the harness first when it has not
  *   been run in this session, so the exported file is never empty.
  */
-function serializeVerification() {
-  const result = HW6_STATE.lastVerification || runSelfChecks();
+async function serializeVerification() {
+  const result = HW6_STATE.lastVerification || await runSelfChecks();
   let backend = HW6_STATE.backend;
   if (!backend && typeof tf !== "undefined" && typeof tf.getBackend === "function") {
     try {
@@ -3241,6 +2758,8 @@ function serializeVerification() {
  * @returns {string} CSV text (RFC 4180 quoting).
  */
 function serializeResults() {
+  if (typeof HW6_TEST_COMPARISON !== "undefined" && HW6_TEST_COMPARISON.result?.status === "complete") return HW6_TEST_COMPARISON.csvResults();
+  if (HW6_ALPHA_SELECTION.result && !HW6_STATE.comparisonRows) return HW6_ALPHA_SELECTION.csv(HW6_ALPHA_SELECTION.result).summary;
   const header = [
     "method", "alpha", "recall_at_10", "cohort_size", "excluded_unseen_ids",
     "excluded_no_eligible_user", "mean_popularity", "iterations", "residual",
@@ -3248,7 +2767,7 @@ function serializeResults() {
   ];
   const rows = [];
 
-  const exclusions = HW6_STATE.splitReady ? hw6CohortExclusions("test") : null;
+  const exclusions = HW6_STATE.splitReady && HW6_RETRIEVAL.coverageReady() ? hw6CohortExclusions("test") : null;
   const unseenList = exclusions && exclusions.unseenIds ? exclusions.unseenIds.join(";") : "";
 
   (HW6_STATE.comparisonRows || []).forEach(function (row) {
@@ -3293,7 +2812,7 @@ function serializeResults() {
       key,
       hw6Fmt(record.alpha, 2),
       "",
-      hw6SharedCohort("test").length,
+      exclusions ? exclusions.cohortSize : "",
       "",
       "",
       "",
@@ -3318,10 +2837,14 @@ function serializeResults() {
  *
  * @returns {string} CSV text (RFC 4180 quoting; commas inside titles are quoted).
  */
-function serializeRecommendations() {
+function serializeRecommendations(options = {}) {
+  if (!options.exampleOnly && typeof HW6_TEST_COMPARISON !== "undefined" && HW6_TEST_COMPARISON.result?.status === "complete") {
+    return HW6_TEST_COMPARISON.csvRecommendations();
+  }
   const header = [
     "user_id", "method", "alpha", "rank", "movie_id", "title", "genres",
     "score", "training_popularity",
+    "split", "mean_training_popularity",
   ];
   const rows = HW6_STATE.recommendationRows.map(function (row) {
     return [
@@ -3334,6 +2857,8 @@ function serializeRecommendations() {
       row.genres,
       row.score,
       row.trainingPopularity,
+      row.split,
+      row.meanPopularity,
     ];
   });
   return hw6CsvDocument(header, rows);
@@ -3347,8 +2872,8 @@ function serializeRecommendations() {
 function hw6WireExports() {
   const verification = document.getElementById("export-verification");
   if (verification) {
-    verification.addEventListener("click", function () {
-      download("verification.json", serializeVerification(), "application/json");
+    verification.addEventListener("click", async function () {
+      download("verification.json", await serializeVerification(), "application/json");
     });
   }
   const results = document.getElementById("export-results");
@@ -3397,6 +2922,7 @@ function hw6HandleBuildGraph() {
       setGraph(graph);
     }
     hw6InvalidateCaches();
+    hw6RenderConvergence();
     hw6SafeRenderGraphView();
     const nodes = hw6NodeCount(graph);
     hw6SetStatus("Graph built: " + (nodes ? nodes.toLocaleString("en-US") + " nodes reported." : "node count not reported."));
@@ -3417,9 +2943,8 @@ function hw6HandleBuildGraph() {
  *
  * Returns a `Float64Array` indexed by graph node index (users first, then
  * movies): user nodes contribute 0, movie nodes carry the selected method's
- * score. Returns `null` when the scores cannot be produced (for example while
- * `movieScores` is still a `TODO(hw6)` stub), so the caller can fall back to
- * degree colouring without throwing.
+ * score. Propagation is never started by rendering: only a matching completed
+ * cache may supply PageRank/PPR scores. Otherwise return null for degree colour.
  *
  * @param {Object} graph
  * @param {number} seedUserId
@@ -3432,8 +2957,12 @@ function hw6NodeScoresForView(graph, seedUserId) {
   const method = hw6ReadMethod();
   const alpha = hw6ReadAlpha();
   try {
-    if (method === "pagerank") return Float64Array.from(hw6RunPageRank(graph, alpha).scores);
-    if (method === "ppr") return Float64Array.from(hw6RunPPR(graph, seedUserId, alpha).scores);
+    if (method === "pagerank" || method === "ppr") {
+      const cached = method === "ppr" ? HW6_STATE.ppr : HW6_STATE.pageRank;
+      if (!cached || cached.graph !== graph || cached.alpha !== alpha ||
+          (method === "ppr" && cached.userId !== seedUserId)) return null;
+      return Float64Array.from(cached.scores);
+    }
     const vector = new Float64Array(n);
     // The view accessor takes a GLOBAL node index.
     const index = hw6MovieNodeIndex(graph);
@@ -3499,11 +3028,29 @@ function hw6SafeRenderGraphView() {
 }
 
 /**
+ * Disable existing controls during an async calculation, preserving their
+ * previous disabled states. This prevents double clicks and graph/seed changes
+ * while a run is in progress; no layout or styling is changed.
+ * @returns {function():void|null} Unlock callback, or null if already busy.
+ */
+function hw6LockPropagationControls() {
+  if (HW6_STATE.propagationBusy) return null;
+  HW6_STATE.propagationBusy = true;
+  const controls = Array.from(document.querySelectorAll("button, input, select"));
+  const disabled = controls.map(control => control.disabled);
+  controls.forEach(control => { control.disabled = true; });
+  return function () {
+    controls.forEach((control, index) => { control.disabled = disabled[index]; });
+    HW6_STATE.propagationBusy = false;
+  };
+}
+
+/**
  * Run global PageRank at the selected alpha and record convergence.
  *
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function hw6HandleRunPageRank() {
+async function hw6HandleRunPageRank() {
   const graph = hw6ActiveGraph();
   const target = document.getElementById("convergence-results");
   if (!graph) {
@@ -3511,8 +3058,11 @@ function hw6HandleRunPageRank() {
     if (target) target.innerHTML = '<p class="empty-state">No graph yet \u2014 press \u201cBuild graph\u201d first.</p>';
     return;
   }
+  const unlock = hw6LockPropagationControls();
+  if (!unlock) return;
   try {
-    hw6RunAndRecordConvergence("pagerank", graph, hw6ReadAlpha());
+    hw6SetStatus("Running global PageRank with TensorFlow.js...");
+    await hw6RunAndRecordConvergence("pagerank", graph, hw6ReadAlpha());
     hw6RenderConvergence();
     hw6SafeRenderGraphView();
     const record = HW6_STATE.convergence.pagerank;
@@ -3524,15 +3074,17 @@ function hw6HandleRunPageRank() {
   } catch (error) {
     if (target) target.innerHTML = hw6UnavailableHtml("Convergence", error);
     hw6SetStatus("PageRank unavailable: " + String(error && error.message ? error.message : error));
+  } finally {
+    unlock();
   }
 }
 
 /**
  * Run PPR from the restart seed user at the selected alpha and record convergence.
  *
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function hw6HandleRunPPR() {
+async function hw6HandleRunPPR() {
   const graph = hw6ActiveGraph();
   const target = document.getElementById("convergence-results");
   if (!graph) {
@@ -3545,8 +3097,11 @@ function hw6HandleRunPPR() {
     hw6SetStatus("No restart seed user selected.");
     return;
   }
+  const unlock = hw6LockPropagationControls();
+  if (!unlock) return;
   try {
-    hw6RunAndRecordConvergence("ppr", graph, hw6ReadAlpha(), seedUserId);
+    hw6SetStatus("Running PPR for user " + seedUserId + " with TensorFlow.js...");
+    await hw6RunAndRecordConvergence("ppr", graph, hw6ReadAlpha(), seedUserId);
     hw6RenderConvergence();
     hw6SafeRenderGraphView();
     const record = HW6_STATE.convergence.ppr;
@@ -3558,60 +3113,36 @@ function hw6HandleRunPPR() {
   } catch (error) {
     if (target) target.innerHTML = hw6UnavailableHtml("Convergence", error);
     hw6SetStatus("PPR unavailable: " + String(error && error.message ? error.message : error));
+  } finally {
+    unlock();
   }
 }
 
 /**
- * Run the whole retrieval evaluation: four-method comparison, validation alpha
- * sweep and the recall detail for the selected method. Every panel degrades to
- * a readable state while the stubs are unimplemented.
- *
- * The two-user demonstration is NOT part of this run: it has its own control
- * (`#two-user-demo-btn`) and its own output container (`#two-user-demo-results`).
+ * Show a saved final TEST comparison, or perform one explicit one-pass run when
+ * absent. Details are read from the same per-user records, never recalculated.
+ * This action cannot start alpha selection or MF training. Fixed-alpha examples
+ * keep their separate button and output container.
  *
  * @returns {Promise<void>}
  */
 async function hw6HandleRecall() {
-  const alpha = hw6ReadAlpha();
-  const method = hw6ReadMethod();
-  const graph = hw6ActiveGraph();
-
-  if (graph) {
-    try {
-      hw6RunAndRecordConvergence("pagerank", graph, alpha);
-    } catch (error) {
-      // Convergence is optional evidence; the comparison below reports gaps.
-    }
-    const seedUserId = hw6ReadNumber("seed-user-select", Number.NaN);
-    if (Number.isFinite(seedUserId)) {
-      try {
-        hw6RunAndRecordConvergence("ppr", graph, alpha, seedUserId);
-      } catch (error) {
-        // Same as above.
-      }
-    }
-  }
-
-  const comparison = await hw6RunComparison("test");
-  hw6RenderConvergence();
-  hw6RenderComparison(comparison);
-
-  const sweep = hw6RunAlphaSweep();
-  hw6RenderAlphaSweep(sweep);
-
-  const target = document.getElementById("recall-results");
-  if (target) {
-    try {
-      const report = recallAtK(method, HW6_K, "test");
-      HW6_STATE.recallReport = report;
-      hw6RenderRecall(report, method, "test");
-    } catch (error) {
-      target.innerHTML = hw6UnavailableHtml("Retrieval evaluation", error);
-    }
-  }
-
-  const selected = sweep.best === null ? "not selected (validation sweep unavailable)" : "alpha " + hw6Fmt(sweep.best, 2);
-  hw6SetStatus("Evaluation run complete \u2014 selected " + selected + ".");
+  const unlock = hw6LockPropagationControls();
+  if (!unlock) return;
+  try {
+    hw6SetStatus("Preparing test comparison from saved alpha/MF; existing results are reused...");
+    const comparison = await hw6RunComparison("test");
+    if (comparison.status !== "complete") throw new Error(comparison.error);
+    const row = comparison.rows.find(row => row.method === hw6ReadMethod());
+    const report = { recall: row.recall, cohort: comparison.cohort, exclusions: comparison.exclusions,
+      excludedUnseen: comparison.exclusions.excludedUnseen, excludedNoEligible: comparison.exclusions.excludedNoEligible,
+      perUser: row.perUser.map(user => ({ userId: user.userId, relevant: user.relevant, hit: user.hits })) };
+    HW6_STATE.recallReport = report;
+    hw6RenderRecall(report, row.method, "test");
+    hw6SetStatus("Test comparison ready at validation-selected alpha " + comparison.alpha + "; no retraining or alpha sweep.");
+  } catch (error) {
+    hw6SetStatus("Test comparison failed: " + error.message);
+  } finally { unlock(); }
 }
 
 /**
@@ -3619,66 +3150,69 @@ async function hw6HandleRecall() {
  * into `#alpha-sweep-results`, reporting the selected alpha (exact ties toward
  * the smaller alpha). Degrades to a readable explanation while the stubs throw.
  *
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function hw6HandleAlphaSweep() {
+async function hw6HandleAlphaSweep() {
   const target = document.getElementById("alpha-sweep-results");
+  const unlock = hw6LockPropagationControls();
+  if (!unlock) return;
   let sweep = null;
   try {
-    sweep = hw6RunAlphaSweep();
+    sweep = await hw6RunAlphaSweep();
+    hw6RenderAlphaSweep(sweep);
+    hw6SetStatus(sweep.status === "complete" ? "Validation alpha selection complete: alpha " + sweep.selectedAlpha +
+      ". Example slider unchanged; full test Recall has not been run." : "Validation selection failed: " + sweep.error + ". No winner selected.");
   } catch (error) {
     if (target) target.innerHTML = hw6UnavailableHtml("Alpha sweep", error);
     hw6SetStatus("Alpha sweep unavailable: " + String(error && error.message ? error.message : error));
-    return;
+  } finally {
+    unlock();
   }
-  hw6RenderAlphaSweep(sweep);
-  const selected = sweep.best === null ? "not selected (validation sweep unavailable)" : "alpha " + hw6Fmt(sweep.best, 2);
-  hw6SetStatus("Alpha sweep (validation Recall@10) complete \u2014 selected " + selected + ".");
 }
 
 /**
- * Run the readme section 6.2 one-factor-at-a-time two-user demonstration and
- * render it into `#two-user-demo-results` (its only output target). Degrades to
- * a readable explanation while the stubs throw.
+ * Display exactly three saved PPR examples and train-only profiles. No
+ * propagation, final metric calculation, model training or alpha search.
  *
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function hw6HandleTwoUserDemo() {
-  const target = document.getElementById("two-user-demo-results");
-  let demo = null;
+async function hw6HandleTwoUserDemo() {
+  const target = document.getElementById("ppr-settings-results");
+  const unlock = hw6LockPropagationControls();
+  if (!unlock) return;
   try {
-    demo = hw6RunTwoUserDemo();
+    hw6SetStatus("Loading three cached PPR settings and train-only profiles...");
+    await HW6_PPR_PROFILES.ensureSaved();
+    HW6_PPR_PROFILES.render();
+    hw6SetStatus("Three PPR settings ready; two baseline comparisons; profiles use train only. No algorithms or metrics rerun.");
   } catch (error) {
-    if (target) target.innerHTML = hw6UnavailableHtml("Two-user demo", error);
-    hw6SetStatus("Two-user demonstration unavailable: " + String(error && error.message ? error.message : error));
-    return;
-  }
-  if (target) {
-    target.innerHTML =
-      hw6RunTwoUserDemoHtml(demo) ||
-      '<p class="empty-state">The two-user demonstration produced no output.</p>';
-  }
-  if (demo && demo.error) {
-    hw6SetStatus("Two-user demonstration unavailable: " + demo.error);
-  } else if (demo && demo.users && demo.users.length >= 2) {
-    hw6SetStatus("Two-user demonstration complete \u2014 users " + demo.users[0] + " and " + demo.users[1] +
-      "; one factor changes per comparison.");
-  } else {
-    hw6SetStatus("Two-user demonstration could not select two cohort users.");
+    if (target) target.textContent = "PPR settings/profile check failed: " + error.message;
+    hw6SetStatus("PPR settings/profile check failed: " + error.message);
+  } finally {
+    unlock();
   }
 }
 
 /**
  * Run the self-checks and report the summary in the status line.
  *
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function hw6HandleRunTests() {
-  const summary = runSelfChecks();
-  hw6SetStatus(
-    "Self-checks: pass " + summary.passed + ", fail " + summary.failed + ", pending " + summary.pending +
-    ". Unimplemented TODO(hw6) paths are reported PENDING, not failed.",
-  );
+async function hw6HandleRunTests() {
+  const unlock = hw6LockPropagationControls();
+  if (!unlock) return;
+  try {
+    hw6SetStatus("Running asynchronous self-checks...");
+    const summary = await runSelfChecks();
+    hw6SetStatus(
+      "Self-checks: pass " + summary.passed + ", fail " + summary.failed + ", pending " + summary.pending +
+      ". All implementation errors are reported as FAIL, never PENDING.",
+    );
+  } catch (error) {
+    hw6SetStatus("Self-checks failed: " + graphErrorMessage(error));
+  } finally {
+    unlock();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -3699,18 +3233,20 @@ function hw6WireControls() {
       const value = hw6ReadAlpha();
       if (readout) readout.textContent = value.toFixed(2);
       hw6InvalidateCaches();
+      hw6RenderConvergence();
       hw6SetStatus("Alpha changed to " + value.toFixed(2) + " \u2014 cached PageRank and PPR results are stale; run again.");
     });
   }
 
   const method = document.getElementById("method");
   if (method) {
-    // Selecting `mf` is the first need for MF scores: train the lazy reference
-    // now (with progress reported and the browser painting between epochs).
+    // Selecting MF loads saved weights only; retrieval cannot initiate training.
     method.addEventListener("change", async function () {
       const value = hw6ReadMethod();
       if (value === "mf") {
-        await hw6EnsureMfForNeed();
+        try { await hw6EnsureMfForNeed(); }
+        catch (error) { hw6SetStatus("HW5 MF failed: " + error.message); return; }
+        return;
       }
       hw6SetStatus("Method set to " + value + ". Press \u201cRecommend Top-10\u201d to refresh the list.");
     });
@@ -3729,10 +3265,18 @@ function hw6WireControls() {
   if (recommendButton) recommendButton.addEventListener("click", hw6RenderRecommendations);
 
   const recallButton = document.getElementById("recall-btn");
-  if (recallButton) recallButton.addEventListener("click", hw6HandleRecall);
+  if (recallButton) {
+    recallButton.disabled = !HW6_FULL_EXPERIMENTS_ENABLED;
+    recallButton.title = "Show saved final test results; calculate once only if absent";
+    recallButton.addEventListener("click", hw6HandleRecall);
+  }
 
   const alphaSweepButton = document.getElementById("alpha-sweep-btn");
-  if (alphaSweepButton) alphaSweepButton.addEventListener("click", hw6HandleAlphaSweep);
+  if (alphaSweepButton) {
+    alphaSweepButton.disabled = false;
+    alphaSweepButton.title = "Validation-only selection; a compatible saved result is reused";
+    alphaSweepButton.addEventListener("click", hw6HandleAlphaSweep);
+  }
 
   const twoUserDemoButton = document.getElementById("two-user-demo-btn");
   if (twoUserDemoButton) twoUserDemoButton.addEventListener("click", hw6HandleTwoUserDemo);
@@ -3751,11 +3295,8 @@ function hw6WireControls() {
  * Select the backend, load the data, split it chronologically, build the
  * provided indices, render the summaries and wire the controls.
  *
- * NOTHING MF-related is computed here. The provided MF reference is trained
- * lazily, on the first need only (switching the method to `mf`, pressing
- * "Recommend Top-10" with `mf` selected, or running the four-method comparison),
- * with progress reported in the status line and the browser painting between
- * epochs. The load path therefore must not claim the model was trained.
+ * MF is loaded lazily from a compatible saved checkpoint; absence is an error.
+ * Bootstrap itself does not train or claim MF eligibility has been verified.
  *
  * Resolves without throwing; every failure is reported in the status line.
  *
@@ -3777,13 +3318,18 @@ async function hw6Bootstrap() {
     hw6PopulateUserSelects();
     hw6RenderDatasetSummary();
     hw6RenderGraphSummary();
+    await HW6_ALPHA_SELECTION.restore();
+    hw6RenderAlphaSweep();
+    await HW6_TEST_COMPARISON.restore();
+    try { await HW6_PPR_PROFILES.restore(); }
+    catch (error) { hw6SetStatus("PPR settings/profile check failed: " + error.message); }
     hw6WireControls();
     HW6_STATE.loaded = true;
     hw6SetStatus(
       "Dataset ready: " + HW6_STATE.trainUserIds.length.toLocaleString("en-US") + " training users, " +
       HW6_STATE.candidateIds.length.toLocaleString("en-US") + " candidate movies on " + backend +
-      ". The MF reference is not trained yet (it trains on first use). Implement the TODO(hw6) functions, " +
-      "then build the graph.",
+      ". HW5 MF loads its saved checkpoint on first use; retraining is disabled. " +
+      "Build the graph to run PageRank/PPR.",
     );
   } catch (error) {
     console.error("Initialization failed:", error);

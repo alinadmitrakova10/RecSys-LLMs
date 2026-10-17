@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-10-17T18:46:28.482Z",
+  "status": "passed",
+  "cohortSize": 846,
+  "macroRecomputedFromAllUsers": true,
+  "incompleteSavedGridRejected": true,
+  "sliderDoesNotChangeWinner": true,
+  "restoredAlpha": 0.5,
+  "audit": {
+    "testRecallAttempts": 0,
+    "trainingAttempts": 0
+  },
+  "finalBackendCounts": [
+    {
+      "alpha": 0.5,
+      "users": 846,
+      "cpuUsers": 0,
+      "failedAttemptsRetained": 0
+    },
+    {
+      "alpha": 0.7,
+      "users": 846,
+      "cpuUsers": 0,
+      "failedAttemptsRetained": 0
+    },
+    {
+      "alpha": 0.85,
+      "users": 846,
+      "cpuUsers": 0,
+      "failedAttemptsRetained": 0
+    },
+    {
+      "alpha": 0.95,
+      "users": 846,
+      "cpuUsers": 3,
+      "failedAttemptsRetained": 30
+    }
+  ],
+  "pageErrors": []
+}

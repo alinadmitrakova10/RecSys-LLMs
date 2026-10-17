@@ -16,11 +16,9 @@
  * `ratingMatrix`, `genreNames`, `SPLIT_EXCLUSIONS` and `splitByTimestamp()`.
  * This file does not mutate them.
  *
- * WHAT YOU MUST IMPLEMENT (`TODO(hw6)` - each stub throws until you write it):
- *   1. `buildGraph(train)`            - bipartite graph over training positives.
- *   2. `rowNormalize(graph)`          - row-stochastic transition Q + dangling mask.
- *   3. `pageRank(alpha, opts)`        - uniform-restart PageRank.
- *   4. `personalizedPageRank(userId, alpha, opts)` - one-hot restart at one user.
+ * Implements buildGraph, tensor block row normalization, global PageRank and PPR.
+ * Propagation returns Promises; callers must await the result. MovieLens uses
+ * two rectangular blocks, never a nodeCount-by-nodeCount adjacency matrix.
  *
  * PROVIDED for you (scaffolding): the `REFERENCE_GRAPH` constant with the two
  * reference vectors and both rankings from readme.md section 4.1 (plus the
@@ -32,7 +30,7 @@
  * GRACEFUL DEGRADATION: the fixture demo and the graph view work before any
  * stub is implemented, so the page loads and renders with no console errors.
  *
- * SCOPE NOTE: d3 is used ONLY by the graph view. The propagation stubs must use
+ * SCOPE NOTE: d3 is used ONLY by the graph view. The propagation functions use
  * TensorFlow.js tensor operations on `R` and its transpose for the MovieLens
  * graph (readme.md section 3.5); the fixture demo below is the only
  * plain-JavaScript propagation loop in this file.
@@ -77,22 +75,29 @@
  */
 
 /**
- * The row-normalized transition returned by `rowNormalize`.
+ * Owned tensor blocks returned by `rowNormalize` after tf.ready().
  *
  * @typedef {Object} RowNormalized
- * @property {number[][]} Q             Row-stochastic transition; positive-degree
- *   rows sum to 1, zero-degree rows are all zero.
+ * @property {tf.Tensor2D|null} userToMovie [nUsers, nMovies], normalized R rows.
+ * @property {tf.Tensor2D|null} movieToUser [nMovies, nUsers], normalized R^T rows.
  * @property {boolean[]} danglingMask   true for zero-degree node indices.
+ * @property {number} nUsers User block size.
+ * @property {number} nMovies Movie block size.
+ * @property {number} nodeCount Total nodes, users first.
+ * @property {function():void} dispose Release both blocks; caller owns them.
  */
 
 /**
  * A PageRank / PPR result.
  *
  * @typedef {Object} PageRankResult
- * @property {Float64Array} p     Node probabilities, node order, sums to ~1.
+ * @property {Float64Array} p     JS copy of float32 TF results, users then movies.
  * @property {number} iterations  Number of updates performed.
  * @property {number} residual    Final L1 difference between consecutive distributions.
- * @property {boolean} converged  true when residual < tol before the cap.
+ * @property {boolean} converged  true exactly when the measured residual < tol.
+ * @property {string} backend TensorFlow.js backend actually used.
+ * @property {number} runtimeMs Elapsed milliseconds on this device/backend.
+ * @property {Object[]} trace Optional per-update residual, mass and minimum.
  */
 
 /**
@@ -323,17 +328,13 @@ function getGraph() {
 }
 
 // ---------------------------------------------------------------------------
-// Student stubs (TODO(hw6))
-//
-// Each stub throws until you implement it. Keep the signature and the return
-// shape; update the JSDoc contract notes if your design differs. The graph view
-// and the fixture demo keep working while these throw.
+// Graph construction and TensorFlow.js propagation
 // ---------------------------------------------------------------------------
 
 /**
  * Build the bipartite user-movie graph from the TRAINING split.
  *
- * TODO(hw6): implement this. Rules (readme.md section 3.1):
+ * Rules (readme.md section 3.1):
  *  - The node universe is the set of user ids and movie ids observed in
  *    `train` ONLY. Map ids to contiguous indices explicitly; never add a
  *    padding node (no index-0 "dummy" row).
@@ -348,54 +349,110 @@ function getGraph() {
  *
  * Assumptions: `train` is an array of {userId, movieId, rating, timestamp}
  * records; ratings >= 4.0 are positives. Failure cases: a non-array `train`
- * should be treated as empty (return an empty graph) rather than throwing.
+ * is treated as empty. Invalid IDs/ratings and duplicate pairs throw with the
+ * input row number. No globals, metadata or held-out splits are read or changed.
  *
  * @param {Rating[]} train
  * @returns {Graph}
  */
 function buildGraph(train) {
-  // TODO(hw6): collect observed ids, map them to contiguous indices, fill R and
-  // degree, then return the object described in the typedef and readme 3.1.
-  throw new Error("TODO(hw6): buildGraph is not implemented yet.");
+  const rows = Array.isArray(train) ? train : [];
+  const users = new Set();
+  const moviesInTrain = new Set();
+  const firstRowByPair = new Map();
+  rows.forEach((row, index) => {
+    if (!row || !Number.isSafeInteger(row.userId) || row.userId <= 0 ||
+        !Number.isSafeInteger(row.movieId) || row.movieId <= 0 ||
+        !Number.isInteger(row.rating) || row.rating < 1 || row.rating > 5) {
+      throw new Error(`buildGraph: invalid training record at row ${index + 1}`);
+    }
+    const pair = `${row.userId}:${row.movieId}`;
+    if (firstRowByPair.has(pair)) {
+      throw new Error(`buildGraph: duplicate pair ${pair} at row ${index + 1} (first at row ${firstRowByPair.get(pair)})`);
+    }
+    firstRowByPair.set(pair, index + 1);
+    users.add(row.userId);
+    moviesInTrain.add(row.movieId);
+  });
+
+  const userIds = Array.from(users).sort((a, b) => a - b);
+  const movieIds = Array.from(moviesInTrain).sort((a, b) => a - b);
+  const nUsers = userIds.length;
+  const nMovies = movieIds.length;
+  const nodeCount = nUsers + nMovies;
+  const userIndexOf = new Map(userIds.map((id, index) => [id, index]));
+  const movieIndexOf = new Map(movieIds.map((id, index) => [id, index]));
+  const R = Array.from({ length: nUsers }, () => new Array(nMovies).fill(0));
+  const degree = new Float64Array(nodeCount);
+  let positiveEdges = 0;
+  for (const row of rows) {
+    if (row.rating < 4) continue;
+    const u = userIndexOf.get(row.userId);
+    const i = movieIndexOf.get(row.movieId);
+    R[u][i] = 1;
+    degree[u]++;
+    degree[nUsers + i]++;
+    positiveEdges++;
+  }
+
+  return {
+    nUsers, nMovies, userIds, movieIds, userIndexOf, movieIndexOf, nodeCount,
+    nodeOfUser: userId => userIndexOf.get(userId) ?? -1,
+    movieOfNode: node => Number.isInteger(node) && node >= nUsers && node < nodeCount
+      ? movieIds[node - nUsers] : -1,
+    isUserNode: node => Number.isInteger(node) && node >= 0 && node < nUsers,
+    degree,
+    zeroDegreeUsers: userIds.filter((_, index) => degree[index] === 0),
+    zeroDegreeMovies: movieIds.filter((_, index) => degree[nUsers + index] === 0),
+    positiveEdges,
+    R,
+  };
 }
 
 /**
- * Row-normalize the transition matrix and record the zero-degree nodes.
- *
- * TODO(hw6): for each positive-degree node, divide its row by its degree so the
- * row sums to 1; leave zero-degree rows all-zero and mark them in
- * `danglingMask`. The dangling mass must be handled in the update exactly as in
- * readme.md section 3.3:
- *
- *   p_next = alpha * (Q^T * p + d * v) + (1 - alpha) * v
- *
- * where d is the probability mass currently sitting on zero-degree nodes.
- *
- * INTENDED TENSORFLOW.JS USE (readme.md section 3.5): this helper returns plain
- * JavaScript arrays so it can be inspected and tested, but the student
- * implementation should lift them into tensors for the batched propagation:
- * build the full transition from the two off-diagonal blocks (R row-normalized
- * by user degree and R-transpose row-normalized by movie degree) so the square
- * adjacency matrix is never materialized, and use `tf.tensor2d(Q)`,
- * `tf.transpose`, `tf.matMul`, and a `danglingMask`-derived correction for the
- * dangling term. Q and danglingMask are deliberately plain so tests can verify
- * row sums and the mask without a backend.
- *
- * Assumptions: `graph` comes from `buildGraph` (node order users then movies).
- * Failure cases: a null/missing graph returns { Q: [], danglingMask: [] }.
- *
- * @param {Graph} graph
- * @returns {RowNormalized}
+ * Normalize the two off-diagonal blocks with TensorFlow.js, not a square Q.
+ * Rows of positive degree sum to one; dangling rows stay zero (divide by one).
+ * Assumes buildGraph's binary R and matching degree vector, users first.
+ * Await tf.ready() before calling. The caller must dispose the returned blocks.
+ * Null/empty graphs return empty blocks; malformed dimensions/degrees throw.
+ * @param {Graph|null} graph Training graph, treated as immutable during a run.
+ * @returns {RowNormalized} Tensor blocks and a plain dangling mask.
  */
 function rowNormalize(graph) {
-  // TODO(hw6): normalize positive-degree rows and build the dangling mask.
-  throw new Error("TODO(hw6): rowNormalize is not implemented yet.");
+  if (!graph || graph.nodeCount === 0) {
+    return { nUsers: 0, nMovies: 0, nodeCount: 0, userToMovie: null,
+      movieToUser: null, danglingMask: [], dispose() {} };
+  }
+  const { nUsers, nMovies, nodeCount, R, degree } = graph;
+  if (!Number.isInteger(nUsers) || nUsers < 1 || !Number.isInteger(nMovies) || nMovies < 1 ||
+      nodeCount !== nUsers + nMovies || !Array.isArray(R) || R.length !== nUsers ||
+      R.some(row => !Array.isArray(row) || row.length !== nMovies) ||
+      !degree || degree.length !== nodeCount ||
+      Array.from(degree).some(d => !Number.isSafeInteger(d) || d < 0)) {
+    throw new Error("rowNormalize: invalid graph dimensions or degrees");
+  }
+  if (typeof tf === "undefined" || !tf.getBackend()) {
+    throw new Error("rowNormalize: TensorFlow.js is not ready; await tf.ready()");
+  }
+  const blocks = tf.tidy(() => {
+    const r = tf.tensor2d(R, [nUsers, nMovies], "float32");
+    const userDegree = tf.tensor2d(Array.from(degree).slice(0, nUsers), [nUsers, 1]);
+    const movieDegree = tf.tensor2d(Array.from(degree).slice(nUsers), [nMovies, 1]);
+    return {
+      userToMovie: r.div(userDegree.maximum(1)),
+      movieToUser: r.transpose().div(movieDegree.maximum(1)),
+    };
+  });
+  return { ...blocks, nUsers, nMovies, nodeCount,
+    danglingMask: Array.from(degree, d => d === 0),
+    dispose() { tf.dispose(blocks); },
+  };
 }
 
 /**
  * Global PageRank with a uniform restart distribution.
  *
- * TODO(hw6): implement the power iteration with a uniform restart vector v
+ * Implements power iteration with a uniform restart vector v
  * (readme.md sections 3.2-3.4), using TensorFlow.js for the batched
  * propagation:
  *
@@ -403,19 +460,18 @@ function rowNormalize(graph) {
  *
  * Initialize p to v. Stop when the L1 difference between consecutive
  * distributions is below `tol`, or after `maxIter` iterations; an iteration cap
- * is NOT proof of convergence, so `converged` must be false when the cap is
- * hit. Do not force any node's score to equal the restart probability.
+ * is NOT proof of convergence. At the last allowed update the measured residual
+ * still decides convergence. No node's score is forced to equal restart mass.
  *
- * TRANSITION SOURCE - part of the contract you must implement:
+ * TRANSITION SOURCE:
  *  - `opts.transition` present (a {@link TransitionSpec}, e.g.
  *    `REFERENCE_GRAPH.transition`): propagate on THAT matrix and do not require
  *    the global `GRAPH`. `Q` is already row-normalized, so do not re-normalize
  *    it; read `danglingMask` by position (`danglingMask[i]` is 1 iff node `i` is
  *    zero-degree). This is how the HW6 harness runs your implementation on the
  *    4-node reference fixture.
- *  - `opts.transition` absent: behave exactly as for MovieLens - require the
- *    global `GRAPH` (from `buildGraph` + `rowNormalize`) and build the
- *    transition from its `R` / `degree`.
+ *  - `opts.transition` absent: require opts.graph or the global GRAPH and build
+ *    the transition from its R / degree blocks.
  *  - Neither present: throw a clear Error; never silently fall back to a
  *    uniform distribution.
  *
@@ -428,24 +484,24 @@ function rowNormalize(graph) {
  * The zero-degree policy must be identical here and in `personalizedPageRank`.
  *
  * @param {number} alpha Link-following probability in [0, 1]; 1 - alpha restarts.
- * @param {{tol?: number, maxIter?: number, transition?: TransitionSpec}} [opts]
+ * @param {{tol?:number, maxIter?:number, transition?:TransitionSpec, graph?:Graph, trace?:boolean}} [opts]
  *   Defaults tol = 1e-6, maxIter = 500, transition absent (use the global GRAPH).
- * @returns {PageRankResult} `{p, iterations, residual, converged}`: `p` is a
+ * @returns {Promise<PageRankResult>} `{p, iterations, residual, converged}`: `p` is a
  *   Float64Array over node indices that sums to ~1; `iterations` is the number
  *   of updates performed; `residual` is the final L1 difference
  *   `sum_j |p_next[j] - p[j]|`; `converged` is true only when `residual < tol`
- *   before the iteration cap was reached.
+ *   including at the iteration cap. Optional graph overrides GRAPH without
+ *   swapping global state. trace=true records mass/minimum at every update.
  * @throws {Error} when neither `opts.transition` nor the global `GRAPH` exists.
  */
-function pageRank(alpha, opts) {
-  // TODO(hw6): power iteration with a uniform restart on the tensor path.
-  throw new Error("TODO(hw6): pageRank is not implemented yet.");
+async function pageRank(alpha, opts = {}) {
+  return graphPowerIteration(null, alpha, opts);
 }
 
 /**
  * Personalized PageRank with a one-hot restart at one user's node.
  *
- * TODO(hw6): identical to `pageRank` except the restart vector v is one-hot at
+ * Identical to `pageRank` except the restart vector v is one-hot at
  * one node. It accepts the same `opts.transition` override, the same stopping
  * rule, the same zero-degree policy and the same return shape
  * `{p, iterations, residual, converged}`.
@@ -465,18 +521,132 @@ function pageRank(alpha, opts) {
  * restart; and when neither `opts.transition` nor the global `GRAPH` is
  * available, throw instead of guessing.
  *
- * @param {number} userId Node index of the restart node (see RESTART INDEX).
+ * @param {number} seedNode Node index of the restart node (NOT a raw user ID).
  * @param {number} alpha  Link-following probability in [0, 1]; 1 - alpha restarts.
- * @param {{tol?: number, maxIter?: number, transition?: TransitionSpec}} [opts]
+ * @param {{tol?:number, maxIter?:number, transition?:TransitionSpec, graph?:Graph, trace?:boolean}} [opts]
  *   Same options as `pageRank`; defaults tol = 1e-6, maxIter = 500, transition
  *   absent (use the global GRAPH).
- * @returns {PageRankResult} `{p, iterations, residual, converged}` (see `pageRank`).
+ * @returns {Promise<PageRankResult>} See pageRank, including tensor ownership.
  * @throws {Error} when the restart index is unknown / out of range, or when
  *   neither `opts.transition` nor the global `GRAPH` exists.
  */
-function personalizedPageRank(userId, alpha, opts) {
-  // TODO(hw6): one-hot restart at the user's node; fail loudly on unknown users.
-  throw new Error("TODO(hw6): personalizedPageRank is not implemented yet.");
+async function personalizedPageRank(seedNode, alpha, opts = {}) {
+  if (!Number.isInteger(seedNode)) throw new Error(`PPR: invalid restart node index ${seedNode}`);
+  return graphPowerIteration(seedNode, alpha, opts);
+}
+
+/**
+ * Validate the explicit, already-normalized small-graph transition. Never fix
+ * malformed rows silently. Dense Q is accepted only on this fixture/API path.
+ * @param {TransitionSpec} transition Directed rows Q[from][to].
+ * @returns {number} Node count.
+ */
+function graphValidateTransition(transition) {
+  const { Q, danglingMask } = transition;
+  const n = Array.isArray(Q) ? Q.length : 0;
+  if (!n || !danglingMask || danglingMask.length !== n) {
+    throw new Error("PageRank: transition requires nonempty Q and a matching dangling mask");
+  }
+  Q.forEach((row, i) => {
+    if (!Array.isArray(row) || row.length !== n || row.some(x => !Number.isFinite(x) || x < 0)) {
+      throw new Error(`PageRank: invalid transition row ${i}`);
+    }
+    if (![0, 1, false, true].includes(danglingMask[i])) throw new Error(`PageRank: invalid dangling mask at ${i}`);
+    const expectedSum = danglingMask[i] ? 0 : 1;
+    if (Math.abs(row.reduce((sum, x) => sum + x, 0) - expectedSum) > 1e-6) {
+      throw new Error(`PageRank: transition row ${i} does not sum to ${expectedSum}`);
+    }
+  });
+  return n;
+}
+
+/**
+ * Shared float32 TF.js solver. Starts at v and applies
+ * alpha * (Q^T p + danglingMass * v) + (1 - alpha) * v.
+ * MovieLens uses only normalized R/R^T blocks; p has shape [nodes, 1].
+ * Reads convergence asynchronously outside tidy and releases every owned tensor
+ * on success and failure. Returned p/trace contain JS data, never live tensors.
+ * alpha=1 is allowed for diagnostics but may oscillate until the cap.
+ * @param {number|null} seedNode Null for uniform restart; otherwise a node index.
+ * @param {number} alpha Link-following probability in [0, 1].
+ * @param {Object} opts tol>0; maxIter integer in [1,500]; optional graph/transition/trace.
+ * @returns {Promise<PageRankResult>} Measured residual and convergence verdict.
+ */
+async function graphPowerIteration(seedNode, alpha, opts) {
+  const graph = opts.graph === undefined ? GRAPH : opts.graph;
+  const transition = opts.transition;
+  const tol = opts.tol === undefined ? 1e-6 : opts.tol;
+  const maxIter = opts.maxIter === undefined ? 500 : opts.maxIter;
+  if (!Number.isFinite(alpha) || alpha < 0 || alpha > 1) throw new Error("PageRank: alpha must be in [0, 1]");
+  if (!Number.isFinite(tol) || tol <= 0) throw new Error("PageRank: tol must be positive and finite");
+  if (!Number.isInteger(maxIter) || maxIter < 1 || maxIter > 500) throw new Error("PageRank: maxIter must be in [1, 500]");
+  const n = transition ? graphValidateTransition(transition) : graph && graph.nodeCount;
+  if (!Number.isInteger(n) || n < 1) throw new Error("PageRank: a nonempty graph or explicit transition is required");
+  if (seedNode !== null && (seedNode < 0 || seedNode >= n || (!transition && seedNode >= graph.nUsers))) {
+    throw new Error(`PPR: unknown or non-user restart node index ${seedNode}`);
+  }
+  if (typeof tf === "undefined") throw new Error("PageRank: TensorFlow.js is unavailable");
+  await tf.ready();
+  const started = performance.now();
+  let blocks = null;
+  let q = null;
+  let v = null;
+  let mask = null;
+  let p = null;
+  let pendingStep = null;
+  const trace = [];
+  let iterations = 0;
+  let residual = Infinity;
+  try {
+    if (transition) q = tf.tensor2d(transition.Q, [n, n], "float32");
+    else blocks = rowNormalize(graph);
+    const dangling = transition ? transition.danglingMask : blocks.danglingMask;
+    const restart = new Float32Array(n);
+    if (seedNode === null) restart.fill(1 / n);
+    else restart[seedNode] = 1;
+    v = tf.tensor2d(restart, [n, 1]);
+    mask = tf.tensor2d(Array.from(dangling, x => x ? 1 : 0), [n, 1]);
+    p = v.clone();
+    for (iterations = 1; iterations <= maxIter; iterations++) {
+      pendingStep = tf.tidy(() => {
+        let linked;
+        if (q) linked = tf.matMul(q, p, true, false);
+        else {
+          const pu = p.slice([0, 0], [blocks.nUsers, 1]);
+          const pm = p.slice([blocks.nUsers, 0], [blocks.nMovies, 1]);
+          linked = tf.concat([
+            tf.matMul(blocks.movieToUser, pm, true, false),
+            tf.matMul(blocks.userToMovie, pu, true, false),
+          ], 0);
+        }
+        const restartMass = p.mul(mask).sum().mul(alpha).add(1 - alpha);
+        const next = linked.mul(alpha).add(v.mul(restartMass));
+        const delta = next.sub(p).abs().sum();
+        const stats = opts.trace ? tf.stack([delta, next.sum(), next.min()]) : delta;
+        return { next, stats };
+      });
+      const stats = await pendingStep.stats.data();
+      residual = stats[0];
+      if (!Number.isFinite(residual)) throw new Error("PageRank: non-finite L1 residual");
+      if (opts.trace) trace.push({ iteration: iterations, residual, mass: stats[1], minimum: stats[2] });
+      p.dispose();
+      p = pendingStep.next;
+      pendingStep.stats.dispose();
+      pendingStep = null;
+      if (residual < tol || iterations === maxIter) break;
+      if (iterations % 20 === 0) await tf.nextFrame();
+    }
+    const result = Float64Array.from(await p.data());
+    if (result.some(x => !Number.isFinite(x) || x < 0)) throw new Error("PageRank: invalid final probabilities");
+    const mass = result.reduce((sum, value) => sum + value, 0);
+    if (Math.abs(mass - 1) > 1e-5) throw new Error(`PageRank: final probability mass is ${mass}, expected 1`);
+    return { p: result, iterations, residual, converged: residual < tol,
+      backend: tf.getBackend(), runtimeMs: performance.now() - started, trace };
+  } finally {
+    if (pendingStep) tf.dispose(pendingStep);
+    tf.dispose([q, v, mask, p].filter(Boolean));
+    if (blocks) blocks.dispose();
+  }
 }
 
 // ---------------------------------------------------------------------------

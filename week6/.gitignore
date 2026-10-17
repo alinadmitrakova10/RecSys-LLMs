@@ -1,0 +1,8 @@
+# Coursework submission files stay local, separate from the published app.
+*_report.docx
+*_report.pdf
+*_session.json
+session.json
+report_assets/
+*.pptx
+~$*

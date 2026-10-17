@@ -1,0 +1,5 @@
+method,test_recall_at_10,cohort_size,alpha,alpha_source,mean_training_popularity,backend,runtime_seconds,converged_users,failed_users,min_iterations,max_iterations,max_residual,excluded_unique_users,no_train,no_positive_train,mf_unavailable,no_eligible_relevant,overlap_users,unseen_relevant_records,mf_checkpoint,mf_run_id,mf_selection_objective,total_runtime_seconds
+popularity,0.07602291343770759,861,,,271.99686411149816,javascript,0.43089999997615813,,,,,,82,0,1,0,82,1,13,,,,83.45060000002384
+pagerank,0.07969324149418144,861,0.5,alpha-validation.json,257.820325203252,webgl,1.3493999999761581,861,0,19,19,5.435867933556437e-7,82,0,1,0,82,1,13,,,,83.45060000002384
+ppr,0.11218853219486066,861,0.5,alpha-validation.json,244.20673635307733,webgl,79.369,861,0,21,22,9.994369065680075e-7,82,0,1,0,82,1,13,,,,83.45060000002384
+mf,0.02560857416094039,861,,,73.746225319396,webgl,2.218299999952316,,,,,,82,0,1,0,82,1,13,1,hw5-40a20cc-seeded-retraining-v1-1792247655504,clipped validation RMSE; earliest exact tie; selected factors restored,83.45060000002384

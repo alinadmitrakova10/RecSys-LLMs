@@ -1,0 +1,3 @@
+baseline,changed,changed_factor,common_count,common_ids,appeared_ids,disappeared_ids,baseline_mean_popularity,changed_mean_popularity,mean_popularity_delta,baseline_zero_scores,changed_zero_scores
+baseline,change-user,target user,0,,181;98;174;7;56;117;172;9;121;64,100;258;286;318;357;483;288;300;222;313,245.5,254.9,9.4,0,0
+baseline,change-alpha,alpha,7,100;258;286;318;357;483;222,475;275;423,288;300;313,245.5,228.4,-17.1,0,0

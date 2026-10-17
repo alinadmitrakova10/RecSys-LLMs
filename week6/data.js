@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// week5/data.js — MovieLens 100k data layer (classic <script>, no modules)
+// week6/data.js — MovieLens 100k data layer (classic <script>, no modules)
 //
 // Loads u.item (movies) and u.data (ratings), builds a sparse-friendly
 // rating matrix, and splits every user's ratings chronologically 80/10/10.
@@ -8,11 +8,8 @@
 //   A u.item row has 24 '|'-separated fields:
 //     0 id | 1 title | 2 release | 3 video | 4 url | 5 unknown |
 //     6 Action | 7 Adventure | ... | 23 Western
-//   Field index 5 is the legacy 19th genre flag "unknown", NOT the first real
-//   genre. The 18 real flags therefore live at indices 6..23, so we read them
-//   with fields.slice(6, 24) and pair them with the 18-name `genreNames`
-//   list below. (The earlier fields.slice(5, 24) + 18 names pairing was off
-//   by one.)
+//   Keep unknown separately from the 18 named flags at indices 6..23.
+//   Invalid records and duplicate IDs/pairs fail explicitly with line numbers.
 // ---------------------------------------------------------------------------
 
 // Global variables for storing movie and rating data
@@ -36,7 +33,13 @@ const genreNames = [
 // splitByTimestamp() for reporting.
 let SPLIT_EXCLUSIONS = [];
 
-// Primary function to load data from files
+/**
+ * Fetch and validate both files before replacing the loaded dataset.
+ * MovieLens u.item uses a Latin-1-compatible single-byte encoding, not UTF-8.
+ * A failed fetch or parse leaves the previous dataset intact. Successful calls
+ * replace arrays, dimensions and the matrix, so reloads never append records.
+ * @returns {Promise<void>}
+ */
 async function loadData() {
     try {
         // Load and parse movie data
@@ -44,8 +47,10 @@ async function loadData() {
         if (!moviesResponse.ok) {
             throw new Error(`Failed to load movie data: ${moviesResponse.status}`);
         }
-        const moviesText = await moviesResponse.text();
-        parseItemData(moviesText);
+        const moviesText = new TextDecoder('iso-8859-1').decode(
+            await moviesResponse.arrayBuffer()
+        );
+        const nextMovies = readItemRecords(moviesText);
 
         // Load and parse rating data
         const ratingsResponse = await fetch('u.data');
@@ -53,9 +58,14 @@ async function loadData() {
             throw new Error(`Failed to load rating data: ${ratingsResponse.status}`);
         }
         const ratingsText = await ratingsResponse.text();
-        parseRatingData(ratingsText);
+        const nextRatings = readRatingRecords(
+            ratingsText, new Set(nextMovies.map(movie => movie.id))
+        );
 
-        // Derive matrix dimensions, then build the rating matrix
+        movies = nextMovies;
+        ratings = nextRatings;
+        SPLIT_EXCLUSIONS = [];
+        // Raw-ID matrix dimensions are retained for the existing MF interface.
         numUsers = ratings.reduce((max, r) => Math.max(max, r.userId), 0);
         numMovies = movies.length;
         buildRatingMatrix();
@@ -71,45 +81,97 @@ async function loadData() {
     }
 }
 
-// Parse movie data from u.item format: "id|title|release|video|url|g0|...|g18"
-// genreNames has 18 entries, matched against the real flags at indices 6..23.
-function parseItemData(text) {
-    const lines = text.split('\n');
-
-    for (const line of lines) {
-        if (line.trim() === '') continue;
-
-        const fields = line.split('|');
-        if (fields.length < 24) continue; // Skip malformed rows
-
-        const id = parseInt(fields[0]);
-        const title = fields[1];
-
-        // Read the 18 real genre flags (index 5 is the 'unknown' placeholder)
-        const genreValues = fields.slice(6, 24).map(value => parseInt(value));
-        const genres = genreNames.filter((_, index) => genreValues[index] === 1);
-
-        movies.push({ id, title, genres });
+/**
+ * Parse every physical record; allow one final line terminator, not blank rows.
+ * Collect an error count and the first five line-specific diagnostics. Nothing
+ * is committed when any row fails, and an empty dataset is rejected.
+ * @param {string} text Decoded file contents.
+ * @param {string} source File name used in errors.
+ * @param {function(string, number):Object} parseRow Validates one record.
+ * @returns {Object[]} Valid records only when the entire file is valid.
+ */
+function readMovieLensRecords(text, source, parseRow) {
+    const lines = text.split(/\r?\n/);
+    if (lines[lines.length - 1] === '') lines.pop();
+    const records = [];
+    const errors = [];
+    let errorCount = 0;
+    lines.forEach((line, index) => {
+        try {
+            if (!line.trim()) throw new Error('blank record');
+            records.push(parseRow(line, index + 1));
+        } catch (error) {
+            errorCount++;
+            if (errors.length < 5) errors.push(`line ${index + 1}: ${error.message}`);
+        }
+    });
+    if (errorCount) {
+        throw new Error(`${source}: ${errorCount} invalid record(s); ${errors.join('; ')}`);
     }
+    if (!records.length) throw new Error(`${source}: no records`);
+    return records;
 }
 
-// Parse rating data from u.data format: "userId\tmovieId\trating\ttimestamp"
-function parseRatingData(text) {
-    const lines = text.split('\n');
+/** @returns {boolean} Whether a field is a positive, safe decimal integer. */
+function isMovieLensInteger(value) {
+    return /^\d+$/.test(value) && Number.isSafeInteger(Number(value)) && Number(value) > 0;
+}
 
-    for (const line of lines) {
-        if (line.trim() === '') continue;
+/** Parse metadata without mutating globals; duplicate movie IDs are errors. */
+function readItemRecords(text) {
+    const firstLineById = new Map();
+    return readMovieLensRecords(text, 'u.item', (line, lineNumber) => {
+        const fields = line.split('|');
+        if (fields.length !== 24) throw new Error('expected exactly 24 fields');
+        if (!isMovieLensInteger(fields[0])) throw new Error('invalid movie ID');
+        const id = Number(fields[0]);
+        if (!fields[1].trim()) throw new Error('missing title');
+        if (fields.slice(5).some(flag => flag !== '0' && flag !== '1')) {
+            throw new Error('genre flags must be 0 or 1');
+        }
+        if (firstLineById.has(id)) {
+            throw new Error(`duplicate movie ID ${id} (first at line ${firstLineById.get(id)})`);
+        }
+        firstLineById.set(id, lineNumber);
+        const genres = genreNames.filter((_, index) => fields[index + 6] === '1');
+        if (fields[5] === '1') genres.unshift('unknown');
+        return { id, title: fields[1], genres };
+    });
+}
 
+/**
+ * Parse ratings without mutating globals. Duplicate pairs are rejected rather
+ * than choosing a winner. Optional metadata IDs enable referential validation.
+ * @param {string} text Decoded u.data contents.
+ * @param {Set<number>|null} [movieIds=null] Known movie IDs, when available.
+ * @returns {Object[]} Valid rating records in original file order.
+ */
+function readRatingRecords(text, movieIds = null) {
+    const firstLineByPair = new Map();
+    return readMovieLensRecords(text, 'u.data', (line, lineNumber) => {
         const fields = line.split('\t');
-        if (fields.length < 4) continue; // Skip malformed rows
+        if (fields.length !== 4) throw new Error('expected exactly 4 fields');
+        if (!fields.every(isMovieLensInteger)) throw new Error('expected positive integer fields');
+        const [userId, movieId, rating, timestamp] = fields.map(Number);
+        if (rating > 5) throw new Error('rating must be in [1, 5]');
+        if (movieIds && !movieIds.has(movieId)) throw new Error(`unknown movie ID ${movieId}`);
+        const pair = `${userId}:${movieId}`;
+        if (firstLineByPair.has(pair)) {
+            throw new Error(`duplicate pair ${pair} (first at line ${firstLineByPair.get(pair)})`);
+        }
+        firstLineByPair.set(pair, lineNumber);
+        return { userId, movieId, rating, timestamp };
+    });
+}
 
-        const userId = parseInt(fields[0]);
-        const movieId = parseInt(fields[1]);
-        const rating = parseFloat(fields[2]);
-        const timestamp = parseInt(fields[3]);
+/** Replace metadata only after successful validation; never append records. */
+function parseItemData(text) {
+    movies = readItemRecords(text);
+}
 
-        ratings.push({ userId, movieId, rating, timestamp });
-    }
+/** Replace ratings only after successful validation; never append records. */
+function parseRatingData(text) {
+    ratings = readRatingRecords(text, movies.length ? new Set(movies.map(movie => movie.id)) : null);
 }
 
 // Build the sparse-friendly rating matrix.
@@ -131,7 +193,7 @@ function buildRatingMatrix() {
     }
 }
 
-// TODO(hw5): split EACH user's ratings by ascending timestamp into 80/10/10.
+// Split EACH user's ratings by ascending timestamp into 80/10/10.
 // Returns { train, val, test }, each an array of the same
 // { userId, movieId, rating, timestamp } objects.
 //

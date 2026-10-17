@@ -1,0 +1,31 @@
+setting,changed_factor,user_id,alpha,rank,movie_id,title,genres,ppr_probability,training_popularity,mean_training_popularity,zero_score_count,exclusion_split,source_file
+baseline,none,1,0.85,1,100,Fargo (1996),Crime;Drama;Thriller,0.0027416832745075226,377,245.5,0,test,recommendations-alpha085.json
+baseline,none,1,0.85,2,258,Contact (1997),Drama;Sci-Fi,0.00200196192599833,307,245.5,0,test,recommendations-alpha085.json
+baseline,none,1,0.85,3,286,"English Patient, The (1996)",Drama;Romance;War,0.0018735382473096251,279,245.5,0,test,recommendations-alpha085.json
+baseline,none,1,0.85,4,318,Schindler's List (1993),Drama;War,0.0016319362912327051,224,245.5,0,test,recommendations-alpha085.json
+baseline,none,1,0.85,5,357,One Flew Over the Cuckoo's Nest (1975),Drama,0.0014931062469258904,202,245.5,0,test,recommendations-alpha085.json
+baseline,none,1,0.85,6,483,Casablanca (1942),Drama;Romance;War,0.0014446371933445334,197,245.5,0,test,recommendations-alpha085.json
+baseline,none,1,0.85,7,288,Scream (1996),Horror;Thriller,0.001428726827725768,226,245.5,0,test,recommendations-alpha085.json
+baseline,none,1,0.85,8,300,Air Force One (1997),Action;Thriller,0.00141310621984303,235,245.5,0,test,recommendations-alpha085.json
+baseline,none,1,0.85,9,222,Star Trek: First Contact (1996),Action;Adventure;Sci-Fi,0.001352948253042996,189,245.5,0,test,recommendations-alpha085.json
+baseline,none,1,0.85,10,313,Titanic (1997),Action;Drama;Romance,0.0013183335540816188,219,245.5,0,test,recommendations-alpha085.json
+change-user,target user,2,0.85,1,181,Return of the Jedi (1983),Action;Adventure;Romance;Sci-Fi;War,0.0026007501874119043,339,254.9,0,test,recommendations-alpha085.json
+change-user,target user,2,0.85,2,98,"Silence of the Lambs, The (1991)",Drama;Thriller,0.0020272978581488132,308,254.9,0,test,recommendations-alpha085.json
+change-user,target user,2,0.85,3,174,Raiders of the Lost Ark (1981),Action;Adventure,0.0019665774889290333,312,254.9,0,test,recommendations-alpha085.json
+change-user,target user,2,0.85,4,7,Twelve Monkeys (1995),Drama;Sci-Fi,0.0017902939580380917,234,254.9,0,test,recommendations-alpha085.json
+change-user,target user,2,0.85,5,56,Pulp Fiction (1994),Crime;Drama,0.0017448202706873417,263,254.9,0,test,recommendations-alpha085.json
+change-user,target user,2,0.85,6,117,"Rock, The (1996)",Action;Adventure;Thriller,0.001684593502432108,215,254.9,0,test,recommendations-alpha085.json
+change-user,target user,2,0.85,7,172,"Empire Strikes Back, The (1980)",Action;Adventure;Drama;Romance;Sci-Fi;War,0.0016606281278654933,261,254.9,0,test,recommendations-alpha085.json
+change-user,target user,2,0.85,8,9,Dead Man Walking (1995),Drama,0.0016079518245533109,182,254.9,0,test,recommendations-alpha085.json
+change-user,target user,2,0.85,9,121,Independence Day (ID4) (1996),Action;Sci-Fi;War,0.001602756790816784,207,254.9,0,test,recommendations-alpha085.json
+change-user,target user,2,0.85,10,64,"Shawshank Redemption, The (1994)",Drama,0.0015171804698184133,228,254.9,0,test,recommendations-alpha085.json
+change-alpha,alpha,1,0.5,1,100,Fargo (1996),Crime;Drama;Thriller,0.0006855191895738244,377,228.4,0,test,test-results.json
+change-alpha,alpha,1,0.5,2,258,Contact (1997),Drama;Sci-Fi,0.0004398658056743443,307,228.4,0,test,test-results.json
+change-alpha,alpha,1,0.5,3,286,"English Patient, The (1996)",Drama;Romance;War,0.00043101841583848,279,228.4,0,test,test-results.json
+change-alpha,alpha,1,0.5,4,318,Schindler's List (1993),Drama;War,0.0004038166953250766,224,228.4,0,test,test-results.json
+change-alpha,alpha,1,0.5,5,357,One Flew Over the Cuckoo's Nest (1975),Drama,0.00037716623046435416,202,228.4,0,test,test-results.json
+change-alpha,alpha,1,0.5,6,483,Casablanca (1942),Drama;Romance;War,0.00035968932206742465,197,228.4,0,test,test-results.json
+change-alpha,alpha,1,0.5,7,222,Star Trek: First Contact (1996),Action;Adventure;Sci-Fi,0.00033278539194725454,189,228.4,0,test,test-results.json
+change-alpha,alpha,1,0.5,8,475,Trainspotting (1996),Drama,0.00032809015829116106,164,228.4,0,test,test-results.json
+change-alpha,alpha,1,0.5,9,275,Sense and Sensibility (1995),Drama;Romance,0.00032018491765484214,178,228.4,0,test,test-results.json
+change-alpha,alpha,1,0.5,10,423,E.T. the Extra-Terrestrial (1982),Children's;Drama;Fantasy;Sci-Fi,0.00030566827626898885,167,228.4,0,test,test-results.json

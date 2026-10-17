@@ -1,0 +1,2326 @@
+{
+  "generatedAt": "2026-10-17T15:02:20.387Z",
+  "split": "test",
+  "users": [
+    1,
+    2
+  ],
+  "alpha": 0.85,
+  "alphaStatus": "fixed 0.85 preview, not validation-selected",
+  "candidateCount": 1611,
+  "exclusions": {
+    "val": {
+      "split": "val",
+      "verified": true,
+      "populationUsers": 943,
+      "candidateUsers": 943,
+      "cohortSize": 846,
+      "excludedTotal": 97,
+      "excludedNoTrain": 0,
+      "excludedNoPositiveEdge": 1,
+      "excludedMfUnavailable": 0,
+      "excludedNoEligible": 97,
+      "excludedUnseen": 4,
+      "unseenIds": [
+        814,
+        1106,
+        1526,
+        1653
+      ],
+      "unseenDistinctMovies": 4,
+      "previouslyRatedRelevant": 0,
+      "reasonUsers": {
+        "noTrain": [],
+        "noPositiveTrain": [
+          685
+        ],
+        "mfUnavailable": [],
+        "noEligibleRelevant": [
+          20,
+          26,
+          27,
+          35,
+          40,
+          61,
+          78,
+          103,
+          107,
+          111,
+          120,
+          129,
+          133,
+          135,
+          140,
+          149,
+          155,
+          161,
+          166,
+          181,
+          190,
+          191,
+          192,
+          206,
+          211,
+          218,
+          220,
+          228,
+          240,
+          241,
+          254,
+          282,
+          289,
+          302,
+          319,
+          333,
+          341,
+          349,
+          356,
+          362,
+          365,
+          400,
+          418,
+          431,
+          445,
+          451,
+          461,
+          485,
+          496,
+          509,
+          510,
+          515,
+          520,
+          544,
+          550,
+          560,
+          572,
+          575,
+          578,
+          584,
+          587,
+          594,
+          604,
+          609,
+          614,
+          626,
+          637,
+          646,
+          651,
+          656,
+          660,
+          672,
+          674,
+          681,
+          685,
+          719,
+          723,
+          724,
+          729,
+          732,
+          742,
+          750,
+          768,
+          774,
+          797,
+          809,
+          813,
+          814,
+          820,
+          827,
+          832,
+          837,
+          839,
+          845,
+          915,
+          926,
+          933
+        ]
+      },
+      "excludedUsers": [
+        {
+          "userId": 20,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 26,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 27,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 35,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 40,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 61,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 78,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 103,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 107,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 111,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 120,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 129,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 133,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 135,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 140,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 149,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 155,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 161,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 166,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 181,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 190,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 191,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 192,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 206,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 211,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 218,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 220,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 228,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 240,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 241,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 254,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 282,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 289,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 302,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 319,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 333,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 341,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 349,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 356,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 362,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 365,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 400,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 418,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 431,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 445,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 451,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 461,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 485,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 496,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 509,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 510,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 515,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 520,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 544,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 550,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 560,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 572,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 575,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 578,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 584,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 587,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 594,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 604,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 609,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 614,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 626,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 637,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 646,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 651,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 656,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 660,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 672,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 674,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 681,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 685,
+          "reasons": [
+            "noPositiveTrain",
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 719,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 723,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 724,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 729,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 732,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 742,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 750,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 768,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 774,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 797,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 809,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 813,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 814,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 820,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 827,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 832,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 837,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 839,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 845,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 915,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 926,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 933,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        }
+      ],
+      "overlapUsers": [
+        685
+      ],
+      "mfFailures": [],
+      "countingNote": "Reason counts overlap; excludedTotal counts their union, not their sum. Unseen counts user-movie relevance records."
+    },
+    "test": {
+      "split": "test",
+      "verified": true,
+      "populationUsers": 943,
+      "candidateUsers": 943,
+      "cohortSize": 861,
+      "excludedTotal": 82,
+      "excludedNoTrain": 0,
+      "excludedNoPositiveEdge": 1,
+      "excludedMfUnavailable": 0,
+      "excludedNoEligible": 82,
+      "excludedUnseen": 13,
+      "unseenIds": [
+        913,
+        1106,
+        1130,
+        1458,
+        1498,
+        1525,
+        1613,
+        1625,
+        1645,
+        1646,
+        1650,
+        1651,
+        1674
+      ],
+      "unseenDistinctMovies": 13,
+      "previouslyRatedRelevant": 0,
+      "reasonUsers": {
+        "noTrain": [],
+        "noPositiveTrain": [
+          685
+        ],
+        "mfUnavailable": [],
+        "noEligibleRelevant": [
+          61,
+          76,
+          82,
+          93,
+          102,
+          105,
+          107,
+          108,
+          110,
+          111,
+          120,
+          129,
+          149,
+          155,
+          161,
+          202,
+          209,
+          228,
+          238,
+          240,
+          241,
+          281,
+          284,
+          289,
+          293,
+          302,
+          309,
+          362,
+          380,
+          386,
+          395,
+          399,
+          405,
+          441,
+          443,
+          444,
+          446,
+          453,
+          465,
+          502,
+          510,
+          515,
+          523,
+          544,
+          549,
+          550,
+          572,
+          578,
+          580,
+          584,
+          587,
+          596,
+          631,
+          646,
+          647,
+          651,
+          656,
+          675,
+          685,
+          698,
+          722,
+          723,
+          724,
+          732,
+          733,
+          750,
+          754,
+          769,
+          774,
+          782,
+          809,
+          814,
+          822,
+          824,
+          827,
+          856,
+          873,
+          909,
+          925,
+          926,
+          930,
+          933
+        ]
+      },
+      "excludedUsers": [
+        {
+          "userId": 61,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 76,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 82,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 93,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 102,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 105,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 107,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 108,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 110,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 111,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 120,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 129,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 149,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 155,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 161,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 202,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 209,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 228,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 238,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 240,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 241,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 281,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 284,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 289,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 293,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 302,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 309,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 362,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 380,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 386,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 395,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 399,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 405,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 441,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 443,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 444,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 446,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 453,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 465,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 502,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 510,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 515,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 523,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 544,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 549,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 550,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 572,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 578,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 580,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 584,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 587,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 596,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 631,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 646,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 647,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 651,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 656,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 675,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 685,
+          "reasons": [
+            "noPositiveTrain",
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 698,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 722,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 723,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 724,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 732,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 733,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 750,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 754,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 769,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 774,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 782,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 809,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 814,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 822,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 824,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 827,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 856,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 873,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 909,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 925,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 926,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 930,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        },
+        {
+          "userId": 933,
+          "reasons": [
+            "noEligibleRelevant"
+          ]
+        }
+      ],
+      "overlapUsers": [
+        685
+      ],
+      "mfFailures": [],
+      "countingNote": "Reason counts overlap; excludedTotal counts their union, not their sum. Unseen counts user-movie relevance records."
+    }
+  },
+  "mf": {
+    "sourceCommit": "40a20cc59e6ce017f59a33ec18b5b224af875ce2",
+    "runId": "hw5-40a20cc-seeded-retraining-v1-1792247655504",
+    "checkpoint": 1,
+    "loadedFrom": "mf-checkpoint.json",
+    "trainingRuns": 0
+  },
+  "lists": [
+    {
+      "userId": 1,
+      "method": "popularity",
+      "alpha": null,
+      "split": "test",
+      "recommendations": [
+        {
+          "movieId": 100,
+          "title": "Fargo (1996)",
+          "genres": [
+            "Crime",
+            "Drama",
+            "Thriller"
+          ],
+          "score": 377,
+          "popularity": 377
+        },
+        {
+          "movieId": 258,
+          "title": "Contact (1997)",
+          "genres": [
+            "Drama",
+            "Sci-Fi"
+          ],
+          "score": 307,
+          "popularity": 307
+        },
+        {
+          "movieId": 286,
+          "title": "English Patient, The (1996)",
+          "genres": [
+            "Drama",
+            "Romance",
+            "War"
+          ],
+          "score": 279,
+          "popularity": 279
+        },
+        {
+          "movieId": 300,
+          "title": "Air Force One (1997)",
+          "genres": [
+            "Action",
+            "Thriller"
+          ],
+          "score": 235,
+          "popularity": 235
+        },
+        {
+          "movieId": 288,
+          "title": "Scream (1996)",
+          "genres": [
+            "Horror",
+            "Thriller"
+          ],
+          "score": 226,
+          "popularity": 226
+        },
+        {
+          "movieId": 318,
+          "title": "Schindler's List (1993)",
+          "genres": [
+            "Drama",
+            "War"
+          ],
+          "score": 224,
+          "popularity": 224
+        },
+        {
+          "movieId": 313,
+          "title": "Titanic (1997)",
+          "genres": [
+            "Action",
+            "Drama",
+            "Romance"
+          ],
+          "score": 219,
+          "popularity": 219
+        },
+        {
+          "movieId": 302,
+          "title": "L.A. Confidential (1997)",
+          "genres": [
+            "Crime",
+            "Film-Noir",
+            "Mystery",
+            "Thriller"
+          ],
+          "score": 202,
+          "popularity": 202
+        },
+        {
+          "movieId": 357,
+          "title": "One Flew Over the Cuckoo's Nest (1975)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 202,
+          "popularity": 202
+        },
+        {
+          "movieId": 483,
+          "title": "Casablanca (1942)",
+          "genres": [
+            "Drama",
+            "Romance",
+            "War"
+          ],
+          "score": 197,
+          "popularity": 197
+        }
+      ],
+      "meanPopularity": 246.8,
+      "zeroScoreCount": 0,
+      "scoreMeaning": "distinct positive training users"
+    },
+    {
+      "userId": 2,
+      "method": "popularity",
+      "alpha": null,
+      "split": "test",
+      "recommendations": [
+        {
+          "movieId": 181,
+          "title": "Return of the Jedi (1983)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Romance",
+            "Sci-Fi",
+            "War"
+          ],
+          "score": 339,
+          "popularity": 339
+        },
+        {
+          "movieId": 174,
+          "title": "Raiders of the Lost Ark (1981)",
+          "genres": [
+            "Action",
+            "Adventure"
+          ],
+          "score": 312,
+          "popularity": 312
+        },
+        {
+          "movieId": 98,
+          "title": "Silence of the Lambs, The (1991)",
+          "genres": [
+            "Drama",
+            "Thriller"
+          ],
+          "score": 308,
+          "popularity": 308
+        },
+        {
+          "movieId": 56,
+          "title": "Pulp Fiction (1994)",
+          "genres": [
+            "Crime",
+            "Drama"
+          ],
+          "score": 263,
+          "popularity": 263
+        },
+        {
+          "movieId": 172,
+          "title": "Empire Strikes Back, The (1980)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Drama",
+            "Romance",
+            "Sci-Fi",
+            "War"
+          ],
+          "score": 261,
+          "popularity": 261
+        },
+        {
+          "movieId": 7,
+          "title": "Twelve Monkeys (1995)",
+          "genres": [
+            "Drama",
+            "Sci-Fi"
+          ],
+          "score": 234,
+          "popularity": 234
+        },
+        {
+          "movieId": 79,
+          "title": "Fugitive, The (1993)",
+          "genres": [
+            "Action",
+            "Thriller"
+          ],
+          "score": 230,
+          "popularity": 230
+        },
+        {
+          "movieId": 64,
+          "title": "Shawshank Redemption, The (1994)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 228,
+          "popularity": 228
+        },
+        {
+          "movieId": 318,
+          "title": "Schindler's List (1993)",
+          "genres": [
+            "Drama",
+            "War"
+          ],
+          "score": 224,
+          "popularity": 224
+        },
+        {
+          "movieId": 173,
+          "title": "Princess Bride, The (1987)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Comedy",
+            "Romance"
+          ],
+          "score": 222,
+          "popularity": 222
+        }
+      ],
+      "meanPopularity": 262.1,
+      "zeroScoreCount": 0,
+      "scoreMeaning": "distinct positive training users"
+    },
+    {
+      "userId": 1,
+      "method": "pagerank",
+      "alpha": 0.85,
+      "split": "test",
+      "recommendations": [
+        {
+          "movieId": 100,
+          "title": "Fargo (1996)",
+          "genres": [
+            "Crime",
+            "Drama",
+            "Thriller"
+          ],
+          "score": 0.003567473730072379,
+          "popularity": 377
+        },
+        {
+          "movieId": 258,
+          "title": "Contact (1997)",
+          "genres": [
+            "Drama",
+            "Sci-Fi"
+          ],
+          "score": 0.0032826887909322977,
+          "popularity": 307
+        },
+        {
+          "movieId": 286,
+          "title": "English Patient, The (1996)",
+          "genres": [
+            "Drama",
+            "Romance",
+            "War"
+          ],
+          "score": 0.0030437789391726255,
+          "popularity": 279
+        },
+        {
+          "movieId": 300,
+          "title": "Air Force One (1997)",
+          "genres": [
+            "Action",
+            "Thriller"
+          ],
+          "score": 0.002634837292134762,
+          "popularity": 235
+        },
+        {
+          "movieId": 313,
+          "title": "Titanic (1997)",
+          "genres": [
+            "Action",
+            "Drama",
+            "Romance"
+          ],
+          "score": 0.0025963198859244585,
+          "popularity": 219
+        },
+        {
+          "movieId": 288,
+          "title": "Scream (1996)",
+          "genres": [
+            "Horror",
+            "Thriller"
+          ],
+          "score": 0.0025142100639641285,
+          "popularity": 226
+        },
+        {
+          "movieId": 302,
+          "title": "L.A. Confidential (1997)",
+          "genres": [
+            "Crime",
+            "Film-Noir",
+            "Mystery",
+            "Thriller"
+          ],
+          "score": 0.002308096969500184,
+          "popularity": 202
+        },
+        {
+          "movieId": 294,
+          "title": "Liar Liar (1997)",
+          "genres": [
+            "Comedy"
+          ],
+          "score": 0.0019683304708451033,
+          "popularity": 182
+        },
+        {
+          "movieId": 318,
+          "title": "Schindler's List (1993)",
+          "genres": [
+            "Drama",
+            "War"
+          ],
+          "score": 0.0019530875142663717,
+          "popularity": 224
+        },
+        {
+          "movieId": 222,
+          "title": "Star Trek: First Contact (1996)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Sci-Fi"
+          ],
+          "score": 0.0017912356415763497,
+          "popularity": 189
+        }
+      ],
+      "meanPopularity": 244,
+      "zeroScoreCount": 0,
+      "scoreMeaning": "long-run graph-walk probability"
+    },
+    {
+      "userId": 2,
+      "method": "pagerank",
+      "alpha": 0.85,
+      "split": "test",
+      "recommendations": [
+        {
+          "movieId": 181,
+          "title": "Return of the Jedi (1983)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Romance",
+            "Sci-Fi",
+            "War"
+          ],
+          "score": 0.003158927895128727,
+          "popularity": 339
+        },
+        {
+          "movieId": 174,
+          "title": "Raiders of the Lost Ark (1981)",
+          "genres": [
+            "Action",
+            "Adventure"
+          ],
+          "score": 0.002712427405640483,
+          "popularity": 312
+        },
+        {
+          "movieId": 98,
+          "title": "Silence of the Lambs, The (1991)",
+          "genres": [
+            "Drama",
+            "Thriller"
+          ],
+          "score": 0.0026730915997177362,
+          "popularity": 308
+        },
+        {
+          "movieId": 56,
+          "title": "Pulp Fiction (1994)",
+          "genres": [
+            "Crime",
+            "Drama"
+          ],
+          "score": 0.0023322703782469034,
+          "popularity": 263
+        },
+        {
+          "movieId": 172,
+          "title": "Empire Strikes Back, The (1980)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Drama",
+            "Romance",
+            "Sci-Fi",
+            "War"
+          ],
+          "score": 0.002280208980664611,
+          "popularity": 261
+        },
+        {
+          "movieId": 7,
+          "title": "Twelve Monkeys (1995)",
+          "genres": [
+            "Drama",
+            "Sci-Fi"
+          ],
+          "score": 0.0021731520537286997,
+          "popularity": 234
+        },
+        {
+          "movieId": 117,
+          "title": "Rock, The (1996)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Thriller"
+          ],
+          "score": 0.00202420842833817,
+          "popularity": 215
+        },
+        {
+          "movieId": 79,
+          "title": "Fugitive, The (1993)",
+          "genres": [
+            "Action",
+            "Thriller"
+          ],
+          "score": 0.0020099198445677757,
+          "popularity": 230
+        },
+        {
+          "movieId": 121,
+          "title": "Independence Day (ID4) (1996)",
+          "genres": [
+            "Action",
+            "Sci-Fi",
+            "War"
+          ],
+          "score": 0.001975022489205003,
+          "popularity": 207
+        },
+        {
+          "movieId": 64,
+          "title": "Shawshank Redemption, The (1994)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 0.0019728492479771376,
+          "popularity": 228
+        }
+      ],
+      "meanPopularity": 259.7,
+      "zeroScoreCount": 0,
+      "scoreMeaning": "long-run graph-walk probability"
+    },
+    {
+      "userId": 1,
+      "method": "ppr",
+      "alpha": 0.85,
+      "split": "test",
+      "recommendations": [
+        {
+          "movieId": 100,
+          "title": "Fargo (1996)",
+          "genres": [
+            "Crime",
+            "Drama",
+            "Thriller"
+          ],
+          "score": 0.0027416832745075226,
+          "popularity": 377
+        },
+        {
+          "movieId": 258,
+          "title": "Contact (1997)",
+          "genres": [
+            "Drama",
+            "Sci-Fi"
+          ],
+          "score": 0.00200196192599833,
+          "popularity": 307
+        },
+        {
+          "movieId": 286,
+          "title": "English Patient, The (1996)",
+          "genres": [
+            "Drama",
+            "Romance",
+            "War"
+          ],
+          "score": 0.0018735382473096251,
+          "popularity": 279
+        },
+        {
+          "movieId": 318,
+          "title": "Schindler's List (1993)",
+          "genres": [
+            "Drama",
+            "War"
+          ],
+          "score": 0.0016319362912327051,
+          "popularity": 224
+        },
+        {
+          "movieId": 357,
+          "title": "One Flew Over the Cuckoo's Nest (1975)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 0.0014931062469258904,
+          "popularity": 202
+        },
+        {
+          "movieId": 483,
+          "title": "Casablanca (1942)",
+          "genres": [
+            "Drama",
+            "Romance",
+            "War"
+          ],
+          "score": 0.0014446371933445334,
+          "popularity": 197
+        },
+        {
+          "movieId": 288,
+          "title": "Scream (1996)",
+          "genres": [
+            "Horror",
+            "Thriller"
+          ],
+          "score": 0.001428726827725768,
+          "popularity": 226
+        },
+        {
+          "movieId": 300,
+          "title": "Air Force One (1997)",
+          "genres": [
+            "Action",
+            "Thriller"
+          ],
+          "score": 0.00141310621984303,
+          "popularity": 235
+        },
+        {
+          "movieId": 222,
+          "title": "Star Trek: First Contact (1996)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Sci-Fi"
+          ],
+          "score": 0.001352948253042996,
+          "popularity": 189
+        },
+        {
+          "movieId": 313,
+          "title": "Titanic (1997)",
+          "genres": [
+            "Action",
+            "Drama",
+            "Romance"
+          ],
+          "score": 0.0013183335540816188,
+          "popularity": 219
+        }
+      ],
+      "meanPopularity": 245.5,
+      "zeroScoreCount": 0,
+      "scoreMeaning": "long-run graph-walk probability"
+    },
+    {
+      "userId": 2,
+      "method": "ppr",
+      "alpha": 0.85,
+      "split": "test",
+      "recommendations": [
+        {
+          "movieId": 181,
+          "title": "Return of the Jedi (1983)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Romance",
+            "Sci-Fi",
+            "War"
+          ],
+          "score": 0.0026007501874119043,
+          "popularity": 339
+        },
+        {
+          "movieId": 98,
+          "title": "Silence of the Lambs, The (1991)",
+          "genres": [
+            "Drama",
+            "Thriller"
+          ],
+          "score": 0.0020272978581488132,
+          "popularity": 308
+        },
+        {
+          "movieId": 174,
+          "title": "Raiders of the Lost Ark (1981)",
+          "genres": [
+            "Action",
+            "Adventure"
+          ],
+          "score": 0.0019665774889290333,
+          "popularity": 312
+        },
+        {
+          "movieId": 7,
+          "title": "Twelve Monkeys (1995)",
+          "genres": [
+            "Drama",
+            "Sci-Fi"
+          ],
+          "score": 0.0017902939580380917,
+          "popularity": 234
+        },
+        {
+          "movieId": 56,
+          "title": "Pulp Fiction (1994)",
+          "genres": [
+            "Crime",
+            "Drama"
+          ],
+          "score": 0.0017448202706873417,
+          "popularity": 263
+        },
+        {
+          "movieId": 117,
+          "title": "Rock, The (1996)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Thriller"
+          ],
+          "score": 0.001684593502432108,
+          "popularity": 215
+        },
+        {
+          "movieId": 172,
+          "title": "Empire Strikes Back, The (1980)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Drama",
+            "Romance",
+            "Sci-Fi",
+            "War"
+          ],
+          "score": 0.0016606281278654933,
+          "popularity": 261
+        },
+        {
+          "movieId": 9,
+          "title": "Dead Man Walking (1995)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 0.0016079518245533109,
+          "popularity": 182
+        },
+        {
+          "movieId": 121,
+          "title": "Independence Day (ID4) (1996)",
+          "genres": [
+            "Action",
+            "Sci-Fi",
+            "War"
+          ],
+          "score": 0.001602756790816784,
+          "popularity": 207
+        },
+        {
+          "movieId": 64,
+          "title": "Shawshank Redemption, The (1994)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 0.0015171804698184133,
+          "popularity": 228
+        }
+      ],
+      "meanPopularity": 254.9,
+      "zeroScoreCount": 0,
+      "scoreMeaning": "long-run graph-walk probability"
+    },
+    {
+      "userId": 1,
+      "method": "mf",
+      "alpha": null,
+      "split": "test",
+      "recommendations": [
+        {
+          "movieId": 169,
+          "title": "Wrong Trousers, The (1993)",
+          "genres": [
+            "Animation",
+            "Comedy"
+          ],
+          "score": 5.447879791259766,
+          "popularity": 90
+        },
+        {
+          "movieId": 657,
+          "title": "Manchurian Candidate, The (1962)",
+          "genres": [
+            "Film-Noir",
+            "Thriller"
+          ],
+          "score": 5.324682235717773,
+          "popularity": 96
+        },
+        {
+          "movieId": 483,
+          "title": "Casablanca (1942)",
+          "genres": [
+            "Drama",
+            "Romance",
+            "War"
+          ],
+          "score": 5.323185920715332,
+          "popularity": 197
+        },
+        {
+          "movieId": 490,
+          "title": "To Catch a Thief (1955)",
+          "genres": [
+            "Comedy",
+            "Romance",
+            "Thriller"
+          ],
+          "score": 5.116020679473877,
+          "popularity": 34
+        },
+        {
+          "movieId": 408,
+          "title": "Close Shave, A (1995)",
+          "genres": [
+            "Animation",
+            "Comedy",
+            "Thriller"
+          ],
+          "score": 5.055291175842285,
+          "popularity": 85
+        },
+        {
+          "movieId": 479,
+          "title": "Vertigo (1958)",
+          "genres": [
+            "Mystery",
+            "Thriller"
+          ],
+          "score": 5.014203071594238,
+          "popularity": 147
+        },
+        {
+          "movieId": 510,
+          "title": "Magnificent Seven, The (1954)",
+          "genres": [
+            "Action",
+            "Drama",
+            "Western"
+          ],
+          "score": 5.006475925445557,
+          "popularity": 70
+        },
+        {
+          "movieId": 694,
+          "title": "Persuasion (1995)",
+          "genres": [
+            "Romance"
+          ],
+          "score": 4.972294807434082,
+          "popularity": 28
+        },
+        {
+          "movieId": 178,
+          "title": "12 Angry Men (1957)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 4.968942642211914,
+          "popularity": 93
+        },
+        {
+          "movieId": 357,
+          "title": "One Flew Over the Cuckoo's Nest (1975)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 4.952239036560059,
+          "popularity": 202
+        }
+      ],
+      "meanPopularity": 104.2,
+      "zeroScoreCount": 0,
+      "scoreMeaning": "unclipped trainMean + dot product"
+    },
+    {
+      "userId": 2,
+      "method": "mf",
+      "alpha": null,
+      "split": "test",
+      "recommendations": [
+        {
+          "movieId": 223,
+          "title": "Sling Blade (1996)",
+          "genres": [
+            "Drama",
+            "Thriller"
+          ],
+          "score": 4.821229457855225,
+          "popularity": 99
+        },
+        {
+          "movieId": 169,
+          "title": "Wrong Trousers, The (1993)",
+          "genres": [
+            "Animation",
+            "Comedy"
+          ],
+          "score": 4.803558826446533,
+          "popularity": 90
+        },
+        {
+          "movieId": 170,
+          "title": "Cinema Paradiso (1988)",
+          "genres": [
+            "Comedy",
+            "Drama",
+            "Romance"
+          ],
+          "score": 4.758604049682617,
+          "popularity": 81
+        },
+        {
+          "movieId": 45,
+          "title": "Eat Drink Man Woman (1994)",
+          "genres": [
+            "Comedy",
+            "Drama"
+          ],
+          "score": 4.740419387817383,
+          "popularity": 50
+        },
+        {
+          "movieId": 537,
+          "title": "My Own Private Idaho (1991)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 4.704620361328125,
+          "popularity": 14
+        },
+        {
+          "movieId": 750,
+          "title": "Amistad (1997)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 4.693703651428223,
+          "popularity": 63
+        },
+        {
+          "movieId": 114,
+          "title": "Wallace & Gromit: The Best of Aardman Animation (1996)",
+          "genres": [
+            "Animation"
+          ],
+          "score": 4.6704864501953125,
+          "popularity": 51
+        },
+        {
+          "movieId": 735,
+          "title": "Philadelphia (1993)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 4.650660037994385,
+          "popularity": 70
+        },
+        {
+          "movieId": 923,
+          "title": "Raise the Red Lantern (1991)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 4.6359381675720215,
+          "popularity": 31
+        },
+        {
+          "movieId": 511,
+          "title": "Lawrence of Arabia (1962)",
+          "genres": [
+            "Adventure",
+            "War"
+          ],
+          "score": 4.630577087402344,
+          "popularity": 134
+        }
+      ],
+      "meanPopularity": 68.3,
+      "zeroScoreCount": 0,
+      "scoreMeaning": "unclipped trainMean + dot product"
+    }
+  ],
+  "overlap": [
+    {
+      "method": "popularity",
+      "users": [
+        1,
+        2
+      ],
+      "count": 1,
+      "commonMovieIds": [
+        318
+      ]
+    },
+    {
+      "method": "pagerank",
+      "users": [
+        1,
+        2
+      ],
+      "count": 0,
+      "commonMovieIds": []
+    },
+    {
+      "method": "ppr",
+      "users": [
+        1,
+        2
+      ],
+      "count": 0,
+      "commonMovieIds": []
+    },
+    {
+      "method": "mf",
+      "users": [
+        1,
+        2
+      ],
+      "count": 1,
+      "commonMovieIds": [
+        169
+      ]
+    }
+  ],
+  "fullRecallRun": false,
+  "alphaSweepRun": false
+}

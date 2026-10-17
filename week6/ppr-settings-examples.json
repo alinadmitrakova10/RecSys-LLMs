@@ -1,0 +1,888 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-17T20:01:19.838Z",
+  "sources": {
+    "legacy": {
+      "file": "recommendations-alpha085.json",
+      "sha256": "95030546576acd366a81316cc40aaef0d01aad246d57d33e9b017d0b67a74f4a"
+    },
+    "final": {
+      "file": "test-results.json",
+      "sha256": "62b9e96b7052f99170d27978560ada6688ff1d923d686c253faf7e8565bcbccb"
+    },
+    "trainSha256": "dd446bf939be8f62400355e48e037205dee0fbe59164ede455260d9e5d5cf626",
+    "candidateIdsSha256": "8c51ddfe2774ae5acbf0830af47d78bb4c8b7ec4528b5974132d407aa20a88d7",
+    "candidateCount": 1611,
+    "graphNodes": 2554,
+    "positiveTrainPairs": 45602
+  },
+  "historyRule": "Only HW6_SPLIT.train; timestamp asc then movieId asc. All train ratings retained; positive means rating>=4.",
+  "genreCounting": "Each distinct movieId with a train rating >=4 contributes once to every listed genre, including unknown. Multi-genre films therefore contribute to several counts; shares use positive-film count and need not sum to 100%. Different movie IDs are kept even when titles coincide.",
+  "examples": [
+    {
+      "id": "baseline",
+      "userId": 1,
+      "alpha": 0.85,
+      "changedFactor": "none",
+      "split": "test",
+      "sourceFile": "recommendations-alpha085.json",
+      "sourceSha256": "95030546576acd366a81316cc40aaef0d01aad246d57d33e9b017d0b67a74f4a",
+      "scoreMeaning": "long-run graph-walk probability, not a rating or purchase probability",
+      "recommendations": [
+        {
+          "rank": 1,
+          "movieId": 100,
+          "title": "Fargo (1996)",
+          "genres": [
+            "Crime",
+            "Drama",
+            "Thriller"
+          ],
+          "score": 0.0027416832745075226,
+          "popularity": 377
+        },
+        {
+          "rank": 2,
+          "movieId": 258,
+          "title": "Contact (1997)",
+          "genres": [
+            "Drama",
+            "Sci-Fi"
+          ],
+          "score": 0.00200196192599833,
+          "popularity": 307
+        },
+        {
+          "rank": 3,
+          "movieId": 286,
+          "title": "English Patient, The (1996)",
+          "genres": [
+            "Drama",
+            "Romance",
+            "War"
+          ],
+          "score": 0.0018735382473096251,
+          "popularity": 279
+        },
+        {
+          "rank": 4,
+          "movieId": 318,
+          "title": "Schindler's List (1993)",
+          "genres": [
+            "Drama",
+            "War"
+          ],
+          "score": 0.0016319362912327051,
+          "popularity": 224
+        },
+        {
+          "rank": 5,
+          "movieId": 357,
+          "title": "One Flew Over the Cuckoo's Nest (1975)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 0.0014931062469258904,
+          "popularity": 202
+        },
+        {
+          "rank": 6,
+          "movieId": 483,
+          "title": "Casablanca (1942)",
+          "genres": [
+            "Drama",
+            "Romance",
+            "War"
+          ],
+          "score": 0.0014446371933445334,
+          "popularity": 197
+        },
+        {
+          "rank": 7,
+          "movieId": 288,
+          "title": "Scream (1996)",
+          "genres": [
+            "Horror",
+            "Thriller"
+          ],
+          "score": 0.001428726827725768,
+          "popularity": 226
+        },
+        {
+          "rank": 8,
+          "movieId": 300,
+          "title": "Air Force One (1997)",
+          "genres": [
+            "Action",
+            "Thriller"
+          ],
+          "score": 0.00141310621984303,
+          "popularity": 235
+        },
+        {
+          "rank": 9,
+          "movieId": 222,
+          "title": "Star Trek: First Contact (1996)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Sci-Fi"
+          ],
+          "score": 0.001352948253042996,
+          "popularity": 189
+        },
+        {
+          "rank": 10,
+          "movieId": 313,
+          "title": "Titanic (1997)",
+          "genres": [
+            "Action",
+            "Drama",
+            "Romance"
+          ],
+          "score": 0.0013183335540816188,
+          "popularity": 219
+        }
+      ],
+      "meanPopularity": 245.5,
+      "zeroScoreCount": 0,
+      "genreCounts": {
+        "Crime": 1,
+        "Drama": 7,
+        "Thriller": 3,
+        "Sci-Fi": 2,
+        "Romance": 3,
+        "War": 3,
+        "Horror": 1,
+        "Action": 3,
+        "Adventure": 1
+      }
+    },
+    {
+      "id": "change-user",
+      "userId": 2,
+      "alpha": 0.85,
+      "changedFactor": "target user",
+      "split": "test",
+      "sourceFile": "recommendations-alpha085.json",
+      "sourceSha256": "95030546576acd366a81316cc40aaef0d01aad246d57d33e9b017d0b67a74f4a",
+      "scoreMeaning": "long-run graph-walk probability, not a rating or purchase probability",
+      "recommendations": [
+        {
+          "rank": 1,
+          "movieId": 181,
+          "title": "Return of the Jedi (1983)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Romance",
+            "Sci-Fi",
+            "War"
+          ],
+          "score": 0.0026007501874119043,
+          "popularity": 339
+        },
+        {
+          "rank": 2,
+          "movieId": 98,
+          "title": "Silence of the Lambs, The (1991)",
+          "genres": [
+            "Drama",
+            "Thriller"
+          ],
+          "score": 0.0020272978581488132,
+          "popularity": 308
+        },
+        {
+          "rank": 3,
+          "movieId": 174,
+          "title": "Raiders of the Lost Ark (1981)",
+          "genres": [
+            "Action",
+            "Adventure"
+          ],
+          "score": 0.0019665774889290333,
+          "popularity": 312
+        },
+        {
+          "rank": 4,
+          "movieId": 7,
+          "title": "Twelve Monkeys (1995)",
+          "genres": [
+            "Drama",
+            "Sci-Fi"
+          ],
+          "score": 0.0017902939580380917,
+          "popularity": 234
+        },
+        {
+          "rank": 5,
+          "movieId": 56,
+          "title": "Pulp Fiction (1994)",
+          "genres": [
+            "Crime",
+            "Drama"
+          ],
+          "score": 0.0017448202706873417,
+          "popularity": 263
+        },
+        {
+          "rank": 6,
+          "movieId": 117,
+          "title": "Rock, The (1996)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Thriller"
+          ],
+          "score": 0.001684593502432108,
+          "popularity": 215
+        },
+        {
+          "rank": 7,
+          "movieId": 172,
+          "title": "Empire Strikes Back, The (1980)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Drama",
+            "Romance",
+            "Sci-Fi",
+            "War"
+          ],
+          "score": 0.0016606281278654933,
+          "popularity": 261
+        },
+        {
+          "rank": 8,
+          "movieId": 9,
+          "title": "Dead Man Walking (1995)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 0.0016079518245533109,
+          "popularity": 182
+        },
+        {
+          "rank": 9,
+          "movieId": 121,
+          "title": "Independence Day (ID4) (1996)",
+          "genres": [
+            "Action",
+            "Sci-Fi",
+            "War"
+          ],
+          "score": 0.001602756790816784,
+          "popularity": 207
+        },
+        {
+          "rank": 10,
+          "movieId": 64,
+          "title": "Shawshank Redemption, The (1994)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 0.0015171804698184133,
+          "popularity": 228
+        }
+      ],
+      "meanPopularity": 254.9,
+      "zeroScoreCount": 0,
+      "genreCounts": {
+        "Action": 5,
+        "Adventure": 4,
+        "Romance": 2,
+        "Sci-Fi": 4,
+        "War": 3,
+        "Drama": 6,
+        "Thriller": 2,
+        "Crime": 1
+      }
+    },
+    {
+      "id": "change-alpha",
+      "userId": 1,
+      "alpha": 0.5,
+      "changedFactor": "alpha",
+      "split": "test",
+      "sourceFile": "test-results.json",
+      "sourceSha256": "62b9e96b7052f99170d27978560ada6688ff1d923d686c253faf7e8565bcbccb",
+      "scoreMeaning": "long-run graph-walk probability, not a rating or purchase probability",
+      "recommendations": [
+        {
+          "rank": 1,
+          "movieId": 100,
+          "title": "Fargo (1996)",
+          "genres": [
+            "Crime",
+            "Drama",
+            "Thriller"
+          ],
+          "score": 0.0006855191895738244,
+          "popularity": 377
+        },
+        {
+          "rank": 2,
+          "movieId": 258,
+          "title": "Contact (1997)",
+          "genres": [
+            "Drama",
+            "Sci-Fi"
+          ],
+          "score": 0.0004398658056743443,
+          "popularity": 307
+        },
+        {
+          "rank": 3,
+          "movieId": 286,
+          "title": "English Patient, The (1996)",
+          "genres": [
+            "Drama",
+            "Romance",
+            "War"
+          ],
+          "score": 0.00043101841583848,
+          "popularity": 279
+        },
+        {
+          "rank": 4,
+          "movieId": 318,
+          "title": "Schindler's List (1993)",
+          "genres": [
+            "Drama",
+            "War"
+          ],
+          "score": 0.0004038166953250766,
+          "popularity": 224
+        },
+        {
+          "rank": 5,
+          "movieId": 357,
+          "title": "One Flew Over the Cuckoo's Nest (1975)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 0.00037716623046435416,
+          "popularity": 202
+        },
+        {
+          "rank": 6,
+          "movieId": 483,
+          "title": "Casablanca (1942)",
+          "genres": [
+            "Drama",
+            "Romance",
+            "War"
+          ],
+          "score": 0.00035968932206742465,
+          "popularity": 197
+        },
+        {
+          "rank": 7,
+          "movieId": 222,
+          "title": "Star Trek: First Contact (1996)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Sci-Fi"
+          ],
+          "score": 0.00033278539194725454,
+          "popularity": 189
+        },
+        {
+          "rank": 8,
+          "movieId": 475,
+          "title": "Trainspotting (1996)",
+          "genres": [
+            "Drama"
+          ],
+          "score": 0.00032809015829116106,
+          "popularity": 164
+        },
+        {
+          "rank": 9,
+          "movieId": 275,
+          "title": "Sense and Sensibility (1995)",
+          "genres": [
+            "Drama",
+            "Romance"
+          ],
+          "score": 0.00032018491765484214,
+          "popularity": 178
+        },
+        {
+          "rank": 10,
+          "movieId": 423,
+          "title": "E.T. the Extra-Terrestrial (1982)",
+          "genres": [
+            "Children's",
+            "Drama",
+            "Fantasy",
+            "Sci-Fi"
+          ],
+          "score": 0.00030566827626898885,
+          "popularity": 167
+        }
+      ],
+      "meanPopularity": 228.4,
+      "zeroScoreCount": 0,
+      "genreCounts": {
+        "Crime": 1,
+        "Drama": 9,
+        "Thriller": 1,
+        "Sci-Fi": 3,
+        "Romance": 3,
+        "War": 3,
+        "Action": 1,
+        "Adventure": 1,
+        "Children's": 1,
+        "Fantasy": 1
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "baselineId": "baseline",
+      "changedId": "change-user",
+      "changedFactor": "target user",
+      "commonIds": [],
+      "commonCount": 0,
+      "appearedIds": [
+        181,
+        98,
+        174,
+        7,
+        56,
+        117,
+        172,
+        9,
+        121,
+        64
+      ],
+      "disappearedIds": [
+        100,
+        258,
+        286,
+        318,
+        357,
+        483,
+        288,
+        300,
+        222,
+        313
+      ],
+      "baselineMeanPopularity": 245.5,
+      "changedMeanPopularity": 254.9,
+      "meanPopularityDelta": 9.4,
+      "baselineZeroScoreCount": 0,
+      "changedZeroScoreCount": 0
+    },
+    {
+      "baselineId": "baseline",
+      "changedId": "change-alpha",
+      "changedFactor": "alpha",
+      "commonIds": [
+        100,
+        258,
+        286,
+        318,
+        357,
+        483,
+        222
+      ],
+      "commonCount": 7,
+      "appearedIds": [
+        475,
+        275,
+        423
+      ],
+      "disappearedIds": [
+        288,
+        300,
+        313
+      ],
+      "baselineMeanPopularity": 245.5,
+      "changedMeanPopularity": 228.4,
+      "meanPopularityDelta": -17.1,
+      "baselineZeroScoreCount": 0,
+      "changedZeroScoreCount": 0
+    }
+  ],
+  "profiles": [
+    {
+      "userId": 1,
+      "sourceSplit": "train",
+      "ratingCount": 217,
+      "positiveRatingCount": 131,
+      "positiveMovieCount": 131,
+      "genreAssignments": 280,
+      "genreDistribution": [
+        {
+          "genre": "Drama",
+          "count": 61,
+          "shareOfPositiveFilms": 0.46564885496183206
+        },
+        {
+          "genre": "Comedy",
+          "count": 39,
+          "shareOfPositiveFilms": 0.29770992366412213
+        },
+        {
+          "genre": "Action",
+          "count": 36,
+          "shareOfPositiveFilms": 0.2748091603053435
+        },
+        {
+          "genre": "Sci-Fi",
+          "count": 27,
+          "shareOfPositiveFilms": 0.20610687022900764
+        },
+        {
+          "genre": "Thriller",
+          "count": 25,
+          "shareOfPositiveFilms": 0.19083969465648856
+        },
+        {
+          "genre": "Romance",
+          "count": 22,
+          "shareOfPositiveFilms": 0.16793893129770993
+        },
+        {
+          "genre": "Adventure",
+          "count": 15,
+          "shareOfPositiveFilms": 0.11450381679389313
+        },
+        {
+          "genre": "War",
+          "count": 13,
+          "shareOfPositiveFilms": 0.09923664122137404
+        },
+        {
+          "genre": "Crime",
+          "count": 11,
+          "shareOfPositiveFilms": 0.08396946564885496
+        },
+        {
+          "genre": "Horror",
+          "count": 6,
+          "shareOfPositiveFilms": 0.04580152671755725
+        },
+        {
+          "genre": "Children's",
+          "count": 5,
+          "shareOfPositiveFilms": 0.03816793893129771
+        },
+        {
+          "genre": "Musical",
+          "count": 5,
+          "shareOfPositiveFilms": 0.03816793893129771
+        },
+        {
+          "genre": "Animation",
+          "count": 4,
+          "shareOfPositiveFilms": 0.030534351145038167
+        },
+        {
+          "genre": "Documentary",
+          "count": 3,
+          "shareOfPositiveFilms": 0.022900763358778626
+        },
+        {
+          "genre": "Mystery",
+          "count": 3,
+          "shareOfPositiveFilms": 0.022900763358778626
+        },
+        {
+          "genre": "Western",
+          "count": 2,
+          "shareOfPositiveFilms": 0.015267175572519083
+        },
+        {
+          "genre": "Fantasy",
+          "count": 1,
+          "shareOfPositiveFilms": 0.007633587786259542
+        },
+        {
+          "genre": "Film-Noir",
+          "count": 1,
+          "shareOfPositiveFilms": 0.007633587786259542
+        },
+        {
+          "genre": "unknown",
+          "count": 1,
+          "shareOfPositiveFilms": 0.007633587786259542
+        }
+      ],
+      "ratingDistribution": {
+        "1": 20,
+        "2": 21,
+        "3": 45,
+        "4": 71,
+        "5": 60
+      },
+      "examples": [
+        {
+          "userId": 1,
+          "movieId": 181,
+          "title": "Return of the Jedi (1983)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Romance",
+            "Sci-Fi",
+            "War"
+          ],
+          "rating": 5,
+          "timestamp": 874965739,
+          "positive": true,
+          "split": "train"
+        },
+        {
+          "userId": 1,
+          "movieId": 127,
+          "title": "Godfather, The (1972)",
+          "genres": [
+            "Action",
+            "Crime",
+            "Drama"
+          ],
+          "rating": 5,
+          "timestamp": 874965706,
+          "positive": true,
+          "split": "train"
+        },
+        {
+          "userId": 1,
+          "movieId": 14,
+          "title": "Postino, Il (1994)",
+          "genres": [
+            "Drama",
+            "Romance"
+          ],
+          "rating": 5,
+          "timestamp": 874965706,
+          "positive": true,
+          "split": "train"
+        },
+        {
+          "userId": 1,
+          "movieId": 204,
+          "title": "Back to the Future (1985)",
+          "genres": [
+            "Comedy",
+            "Sci-Fi"
+          ],
+          "rating": 5,
+          "timestamp": 875072688,
+          "positive": true,
+          "split": "train"
+        },
+        {
+          "userId": 1,
+          "movieId": 56,
+          "title": "Pulp Fiction (1994)",
+          "genres": [
+            "Crime",
+            "Drama"
+          ],
+          "rating": 4,
+          "timestamp": 875072716,
+          "positive": true,
+          "split": "train"
+        },
+        {
+          "userId": 1,
+          "movieId": 216,
+          "title": "When Harry Met Sally... (1989)",
+          "genres": [
+            "Comedy",
+            "Romance"
+          ],
+          "rating": 5,
+          "timestamp": 876892701,
+          "positive": true,
+          "split": "train"
+        }
+      ],
+      "historySha256": "b8f2a837f658831bf1c7e1def20c96ff42c524070b19fba7062e7bdd0ce5c4cc"
+    },
+    {
+      "userId": 2,
+      "sourceSplit": "train",
+      "ratingCount": 49,
+      "positiveRatingCount": 32,
+      "positiveMovieCount": 32,
+      "genreAssignments": 62,
+      "genreDistribution": [
+        {
+          "genre": "Drama",
+          "count": 18,
+          "shareOfPositiveFilms": 0.5625
+        },
+        {
+          "genre": "Comedy",
+          "count": 11,
+          "shareOfPositiveFilms": 0.34375
+        },
+        {
+          "genre": "Romance",
+          "count": 11,
+          "shareOfPositiveFilms": 0.34375
+        },
+        {
+          "genre": "Action",
+          "count": 5,
+          "shareOfPositiveFilms": 0.15625
+        },
+        {
+          "genre": "Crime",
+          "count": 5,
+          "shareOfPositiveFilms": 0.15625
+        },
+        {
+          "genre": "Thriller",
+          "count": 3,
+          "shareOfPositiveFilms": 0.09375
+        },
+        {
+          "genre": "Adventure",
+          "count": 2,
+          "shareOfPositiveFilms": 0.0625
+        },
+        {
+          "genre": "Sci-Fi",
+          "count": 2,
+          "shareOfPositiveFilms": 0.0625
+        },
+        {
+          "genre": "War",
+          "count": 2,
+          "shareOfPositiveFilms": 0.0625
+        },
+        {
+          "genre": "Animation",
+          "count": 1,
+          "shareOfPositiveFilms": 0.03125
+        },
+        {
+          "genre": "Children's",
+          "count": 1,
+          "shareOfPositiveFilms": 0.03125
+        },
+        {
+          "genre": "Film-Noir",
+          "count": 1,
+          "shareOfPositiveFilms": 0.03125
+        }
+      ],
+      "ratingDistribution": {
+        "1": 2,
+        "2": 1,
+        "3": 14,
+        "4": 24,
+        "5": 8
+      },
+      "examples": [
+        {
+          "userId": 2,
+          "movieId": 50,
+          "title": "Star Wars (1977)",
+          "genres": [
+            "Action",
+            "Adventure",
+            "Romance",
+            "Sci-Fi",
+            "War"
+          ],
+          "rating": 5,
+          "timestamp": 888552084,
+          "positive": true,
+          "split": "train"
+        },
+        {
+          "userId": 2,
+          "movieId": 100,
+          "title": "Fargo (1996)",
+          "genres": [
+            "Crime",
+            "Drama",
+            "Thriller"
+          ],
+          "rating": 5,
+          "timestamp": 888552084,
+          "positive": true,
+          "split": "train"
+        },
+        {
+          "userId": 2,
+          "movieId": 127,
+          "title": "Godfather, The (1972)",
+          "genres": [
+            "Action",
+            "Crime",
+            "Drama"
+          ],
+          "rating": 5,
+          "timestamp": 888552084,
+          "positive": true,
+          "split": "train"
+        },
+        {
+          "userId": 2,
+          "movieId": 258,
+          "title": "Contact (1997)",
+          "genres": [
+            "Drama",
+            "Sci-Fi"
+          ],
+          "rating": 3,
+          "timestamp": 888549961,
+          "positive": false,
+          "split": "train"
+        },
+        {
+          "userId": 2,
+          "movieId": 275,
+          "title": "Sense and Sensibility (1995)",
+          "genres": [
+            "Drama",
+            "Romance"
+          ],
+          "rating": 5,
+          "timestamp": 888550939,
+          "positive": true,
+          "split": "train"
+        },
+        {
+          "userId": 2,
+          "movieId": 283,
+          "title": "Emma (1996)",
+          "genres": [
+            "Drama",
+            "Romance"
+          ],
+          "rating": 5,
+          "timestamp": 888552084,
+          "positive": true,
+          "split": "train"
+        }
+      ],
+      "historySha256": "c6d1968d04ff0b1027edf349549b52fa87eae5e2e86b7b49e6e8baa93f89e9ce"
+    }
+  ],
+  "observations": [
+    "Changing the target from user 1 to user 2 at alpha=0.85 keeps 0/10 movies. The mean training popularity changes from 245.5 to 254.9. This describes these two lists, not a quality improvement.",
+    "The target-user change also changes which rated IDs are filtered, under the same train+validation exclusion rule. For example, Return of the Jedi (1983) (5/5 in train) cannot appear for user 1, while Return of the Jedi appears for user 2. Fargo (1996) (5/5 in train) and Contact (1997) (3/5 in train) are filtered for user 2 regardless of rating. These filtering facts alone can create list differences.",
+    "User 1 has 217 train ratings, 131 of them positive. Drama has 61 positive films, Comedy 39, Action 36 and Sci-Fi 27. Contact and Star Trek: First Contact share Sci-Fi with Back to the Future (1985) (5/5 in train); Fargo shares Crime/Drama with Godfather, The (1972) (5/5 in train) and Pulp Fiction (1994) (4/5 in train).",
+    "User 2 has 49 train ratings, 32 positive. Drama has 18 positive films, Romance 11 and Comedy 11. Return of the Jedi and The Empire Strikes Back have a concrete title/genre connection to Star Wars (1977) (5/5 in train); Pulp Fiction shares Crime/Drama with Fargo (1996) (5/5 in train) and Godfather, The (1972) (5/5 in train).",
+    "Changing only alpha for user 1 from 0.85 to 0.50 retains 7/10 movies. Trainspotting (Drama), Sense and Sensibility (Drama/Romance), and E.T. (Children's/Drama/Fantasy/Sci-Fi) appear; Scream, Air Force One and Titanic disappear. Drama tags increase from 7 to 9. The mean training popularity decreases from 245.5 to 228.4.",
+    "Sense and Sensibility's Drama/Romance tags are already represented by Postino, Il (1994) (5/5 in train) and When Harry Met Sally... (1989) (5/5 in train). These are descriptive genre connections, not traced causal explanations of the walks: PPR uses positive rating edges, not genre features.",
+    "Zero-score counts (baseline, change-user, change-alpha): 0, 0, 0. In general, a tie-broken zero-score movie has not demonstrated relevance. Different lists do not prove better quality, and lower training popularity alone does not establish a useful discovery.",
+    "The three settings are fixed controlled examples. They do not choose or replace the separately saved final alpha=0.50. Only train records explain the profiles; held-out ratings are used for exclusion checks, not profile evidence."
+  ],
+  "profileEvidenceSplit": "train",
+  "propagatedAgain": false,
+  "populationMetricsRecomputed": false,
+  "alphaSelectedAgain": false,
+  "separateFinalSelectedAlpha": 0.5
+}

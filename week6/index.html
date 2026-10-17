@@ -95,7 +95,7 @@
         <button type="button" id="recall-btn" class="secondary">Evaluate Recall@10 — all four methods</button>
         <div class="button-pair">
           <button type="button" id="alpha-sweep-btn" class="secondary">Run alpha sweep (validation)</button>
-          <button type="button" id="two-user-demo-btn" class="secondary">Run two-user demo (alpha / seed)</button>
+          <button type="button" id="two-user-demo-btn" class="secondary">Show three saved PPR settings / train profiles</button>
         </div>
         <button type="button" id="run-tests" class="secondary">Run tests</button>
       </div>
@@ -139,18 +139,20 @@
     </section>
 
     <section aria-labelledby="comparison-heading" class="panel">
-      <h2 id="comparison-heading">Method comparison</h2>
+      <h2 id="comparison-heading">Final test comparison — validation-selected alpha</h2>
       <div id="comparison-results" role="status" aria-live="polite">
         <p class="empty-state">Recall@10 for the shared cohort across popularity, global PageRank, PPR and MF is compared here.</p>
       </div>
+      <h3>Final test Top-10: users 1 and 2</h3>
+      <div id="test-recommendations" aria-live="polite"></div>
     </section>
 
     <section aria-labelledby="two-user-demo-heading" class="panel">
-      <h2 id="two-user-demo-heading">Two-user one-factor demonstration</h2>
-      <div id="two-user-demo-results" role="status" aria-live="polite" aria-labelledby="two-user-demo-heading">
-        <p class="empty-state">No demonstration yet. Press “Run two-user demo (alpha / seed)” to compare the three readme §6.2 settings.</p>
+      <h2 id="two-user-demo-heading">PPR controlled settings and train-only histories</h2>
+      <div id="ppr-settings-results" role="status" aria-live="polite" aria-labelledby="two-user-demo-heading">
+        <p class="empty-state">User 1 at 0.85; change user only to user 2 at 0.85; change alpha only to user 1 at 0.50.</p>
       </div>
-      <p class="caption">Shows the readme §6.2 settings: baseline user A at alpha = 0.85; seed changed to user B at alpha = 0.85; alpha changed to 0.50 for user A.</p>
+      <p class="caption">Two comparisons against the same baseline. These examples are separate from the final alpha choice and test metrics. Profile evidence uses train only.</p>
     </section>
 
     <section aria-labelledby="recommendations-heading" class="panel">
@@ -169,7 +171,7 @@
 
     <section aria-labelledby="self-checks-heading" class="panel">
       <h2 id="self-checks-heading">Self-checks</h2>
-      <p class="hint">Checks that are not implemented yet are reported as PENDING (<code>TODO(hw6)</code>); they are not counted as passing.</p>
+      <p class="hint">Known-answer fixtures check retrieval and Recall without running full MovieLens evaluation. Implementation errors are reported as FAIL.</p>
       <pre id="self-checks" class="test-log" tabindex="0" aria-label="Self-check log">Press “Run tests” to execute the self-checks.</pre>
     </section>
 
@@ -193,6 +195,14 @@
   <script src="vendor/d3.min.js"></script>
   <script src="data.js"></script>
   <script src="graph.js"></script>
+  <script src="batch-ppr.js"></script>
+  <script src="mf.js"></script>
+  <script src="retrieval.js"></script>
+  <script src="retrieval-checks.js"></script>
+  <script src="alpha-checks.js"></script>
+  <script src="alpha-selection.js"></script>
+  <script src="test-comparison.js"></script>
+  <script src="ppr-profiles.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
