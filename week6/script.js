@@ -772,6 +772,41 @@ function hw6MfRmse(split) {
   return HW6_MF_ENGINE.rmse(split, HW6_MF_MODEL);
 }
 
+/** UI readiness only: do not enable native controls before handlers are wired. */
+function hw6SetReadiness(stage, message) {
+  HW6_STATE.uiStage = stage;
+  HW6_STATE.loaded = stage === "ready";
+  HW6_STATE.uiLoadError = stage === "error" ? message : null;
+  const gate = document.getElementById("application-gate");
+  if (gate) {
+    gate.disabled = stage !== "ready";
+    gate.setAttribute("aria-busy", String(stage === "loading"));
+  }
+  const readiness = document.getElementById("app-readiness");
+  if (readiness) {
+    readiness.textContent = message;
+    readiness.className = stage === "error" ? "error" : "status-line";
+    readiness.setAttribute("role", stage === "error" ? "alert" : "status");
+  }
+  const status = document.getElementById("status");
+  if (status) status.className = stage === "error" ? "status error" : "status";
+  hw6SetStatus(message);
+  const summary = document.getElementById("tests-summary");
+  if (summary) summary.textContent = stage === "ready" ? "Ready to run tests." : stage === "error"
+    ? "Tests unavailable: application loading failed." : "Waiting for the application to be ready.";
+  if (stage === "error") {
+    const dataset = document.getElementById("dataset-summary-body");
+    if (dataset) dataset.textContent = "Application not ready. Follow the loading error above, then reload.";
+    const details = document.getElementById("self-checks");
+    if (details) details.textContent = "Tests were not run. " + message;
+  }
+  if (stage === "ready") {
+    const label = document.getElementById("saved-alpha-label");
+    if (label) label.textContent = typeof HW6_ALPHA_SELECTION.selectedAlpha === "number"
+      ? HW6_ALPHA_SELECTION.selectedAlpha.toFixed(2) : "not loaded";
+  }
+}
+
 /**
  * Load a compatible saved checkpoint only. Retrieval never starts training.
  * Concurrent/repeated callers reuse the same promise/model. Errors are exposed.
@@ -3034,13 +3069,21 @@ function hw6SafeRenderGraphView() {
  * @returns {function():void|null} Unlock callback, or null if already busy.
  */
 function hw6LockPropagationControls() {
+  if (!HW6_STATE.loaded) {
+    hw6SetStatus(HW6_STATE.uiLoadError || "The application is still loading. Wait for the Ready message before running an action.");
+    return null;
+  }
   if (HW6_STATE.propagationBusy) return null;
   HW6_STATE.propagationBusy = true;
+  const gate = document.getElementById("application-gate");
+  const gateWasDisabled = gate ? gate.disabled : false;
+  if (gate) gate.disabled = true;
   const controls = Array.from(document.querySelectorAll("button, input, select"));
   const disabled = controls.map(control => control.disabled);
   controls.forEach(control => { control.disabled = true; });
   return function () {
     controls.forEach((control, index) => { control.disabled = disabled[index]; });
+    if (gate) gate.disabled = gateWasDisabled || !HW6_STATE.loaded;
     HW6_STATE.propagationBusy = false;
   };
 }
@@ -3201,16 +3244,30 @@ async function hw6HandleTwoUserDemo() {
 async function hw6HandleRunTests() {
   const unlock = hw6LockPropagationControls();
   if (!unlock) return;
+  const button = document.getElementById("run-tests");
+  const originalLabel = button ? button.textContent : "Run tests";
+  const summaryEl = document.getElementById("tests-summary");
+  const details = document.getElementById("self-checks");
+  if (button) { button.textContent = "Running tests…"; button.setAttribute("aria-busy", "true"); }
+  if (summaryEl) { summaryEl.textContent = "Running tests… Please wait."; summaryEl.setAttribute("aria-busy", "true"); }
+  if (details) details.textContent = "Running self-checks…";
   try {
     hw6SetStatus("Running asynchronous self-checks...");
+    // Give the busy state a paint before starting the existing test harness.
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const summary = await runSelfChecks();
+    if (summaryEl) summaryEl.textContent = summary.passed + " passed, " + summary.failed + " failed, " + summary.pending + " pending";
     hw6SetStatus(
       "Self-checks: pass " + summary.passed + ", fail " + summary.failed + ", pending " + summary.pending +
       ". All implementation errors are reported as FAIL, never PENDING.",
     );
   } catch (error) {
+    if (summaryEl) summaryEl.textContent = "Tests could not complete: " + graphErrorMessage(error);
+    if (details) details.textContent = "Self-checks failed: " + graphErrorMessage(error);
     hw6SetStatus("Self-checks failed: " + graphErrorMessage(error));
   } finally {
+    if (button) { button.textContent = originalLabel; button.setAttribute("aria-busy", "false"); }
+    if (summaryEl) summaryEl.setAttribute("aria-busy", "false");
     unlock();
   }
 }
@@ -3303,11 +3360,17 @@ function hw6WireControls() {
  * @returns {Promise<void>}
  */
 async function hw6Bootstrap() {
-  const backend = await hw6InitTf();
-  if (!backend) return;
-
-  hw6SetStatus("Loading data\u2026");
+  hw6SetReadiness("loading", "Loading runtime, data and saved results. Controls will be enabled when the application is ready.");
+  if (window.location.protocol === "file:") {
+    hw6SetReadiness("error", "This app cannot load data from file://. Open GitHub Pages, or run python -m http.server 8000 --directory week6 from the repository root and visit http://localhost:8000/index.html. Double-clicking index.html does not work.");
+    const tfStatus = document.getElementById("tf-status");
+    if (tfStatus) tfStatus.textContent = "Initialization skipped: open this app over HTTP or GitHub Pages.";
+    return;
+  }
   try {
+    const backend = await hw6InitTf();
+    if (!backend) throw new Error("TensorFlow.js could not start. Check the CDN/network connection and reload.");
+    hw6SetStatus("Loading data and checking saved results…");
     await loadData();
     const split = splitByTimestamp();
     HW6_SPLIT.train = split.train;
@@ -3318,22 +3381,23 @@ async function hw6Bootstrap() {
     hw6PopulateUserSelects();
     hw6RenderDatasetSummary();
     hw6RenderGraphSummary();
-    await HW6_ALPHA_SELECTION.restore();
+    const alphaResult = await HW6_ALPHA_SELECTION.restore();
+    if (alphaResult?.status === "failed") throw new Error("Saved validation result failed to load: " + alphaResult.error);
     hw6RenderAlphaSweep();
-    await HW6_TEST_COMPARISON.restore();
-    try { await HW6_PPR_PROFILES.restore(); }
-    catch (error) { hw6SetStatus("PPR settings/profile check failed: " + error.message); }
+    const testResult = await HW6_TEST_COMPARISON.restore();
+    if (testResult?.status === "failed") throw new Error("Saved test result failed to load: " + testResult.error);
+    await HW6_PPR_PROFILES.restore();
     hw6WireControls();
-    HW6_STATE.loaded = true;
-    hw6SetStatus(
-      "Dataset ready: " + HW6_STATE.trainUserIds.length.toLocaleString("en-US") + " training users, " +
+    hw6SetReadiness("ready",
+      "Ready. Data and saved results loaded: " + HW6_STATE.trainUserIds.length.toLocaleString("en-US") + " training users, " +
       HW6_STATE.candidateIds.length.toLocaleString("en-US") + " candidate movies on " + backend +
       ". HW5 MF loads its saved checkpoint on first use; retraining is disabled. " +
-      "Build the graph to run PageRank/PPR.",
+      "Choose an action; Run tests is now available.",
     );
   } catch (error) {
     console.error("Initialization failed:", error);
-    hw6SetStatus("Error: " + String(error && error.message ? error.message : error));
+    hw6SetReadiness("error", "Application could not finish loading: " + graphErrorMessage(error) +
+      " Check that the HTTP server is running with all week6 files, then reload. Use GitHub Pages or a local HTTP server, not file://.");
   }
 }
 
