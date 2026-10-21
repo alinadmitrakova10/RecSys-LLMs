@@ -18,7 +18,10 @@
   </header>
 
   <main>
-    <p id="status" class="status" role="status" aria-live="polite">Loading…</p>
+    <p id="status" class="status" role="status" aria-live="polite">Loading the application, data and saved results. Please wait.</p>
+    <p class="hint">Open this app on GitHub Pages or through a local HTTP server, rather than double-clicking index.html.</p>
+
+    <fieldset id="application-gate" disabled aria-label="Application controls and results" aria-busy="true">
 
     <section aria-labelledby="tf-status-heading" class="panel">
       <h2 id="tf-status-heading">TensorFlow.js status</h2>
@@ -42,6 +45,7 @@
 
     <section aria-labelledby="controls-heading" class="panel">
       <h2 id="controls-heading">Controls</h2>
+      <p id="app-readiness" class="status-line" role="status" aria-live="polite">Loading runtime, data and saved results. Controls will be enabled when the application is ready.</p>
 
       <div class="control-grid control-grid--two">
         <div class="control">
@@ -51,6 +55,7 @@
             <output id="alpha-value" class="alpha-value" for="alpha">0.85</output>
           </div>
           <p class="hint">1 - alpha is the restart probability. Validation sweeps 0.50, 0.70, 0.85 and 0.95.</p>
+          <p class="hint" id="alpha-explanation">The slider starts at 0.85 for interactive examples. Saved final PR/PPR results use validation-selected alpha <strong id="saved-alpha-label">0.50</strong>. Moving the slider does not change those results or the three fixed controlled settings below.</p>
         </div>
 
         <div class="control">
@@ -97,7 +102,11 @@
           <button type="button" id="alpha-sweep-btn" class="secondary">Run alpha sweep (validation)</button>
           <button type="button" id="two-user-demo-btn" class="secondary">Show three saved PPR settings / train profiles</button>
         </div>
-        <button type="button" id="run-tests" class="secondary">Run tests</button>
+        <div class="button-pair tests-feedback">
+          <button type="button" id="run-tests" class="secondary" aria-describedby="tests-summary">Run tests</button>
+          <span id="tests-summary" class="hint" role="status" aria-live="polite" aria-atomic="true">Waiting for the application to be ready.</span>
+          <a id="tests-details-link" class="hint" href="#self-checks">View test details</a>
+        </div>
       </div>
 
       <p class="hint">Controls stay enabled only when the step they depend on is available; a disabled control is reported in the status line.</p>
@@ -184,6 +193,7 @@
       </div>
       <p class="caption">Downloads: <code class="filename">verification.json</code> (machine-readable test results), <code class="filename">results.csv</code> (retrieval metrics, common-cohort size, exclusions, selected settings) and <code class="filename">recommendations.csv</code> (user ID, method, alpha, rank, movie ID, title, genres, score, training popularity).</p>
     </section>
+    </fieldset>
   </main>
 
   <footer class="site-footer">

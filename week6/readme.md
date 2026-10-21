@@ -199,6 +199,33 @@ Serve the folder over HTTP (the data layer uses `fetch`, so `file://` will not w
 
 Then open `http://localhost:8000/index.html`.
 
+### Opening the app and checking UI readiness
+
+Open the deployed week6 GitHub Pages URL, or run this from the repository root:
+
+```powershell
+python -m http.server 8000 --directory week6
+```
+
+Visit `http://localhost:8000/index.html`. Double-clicking `index.html` uses
+`file://`, which cannot load the dataset/saved results; the page explains this
+and leaves actions disabled. Runtime, data or saved-result failures also leave
+controls disabled with a visible error. Wait for **Ready** beside the controls
+before using a button.
+
+Press **Run tests**: the nearby label shows **Running tests…**, then
+**12 passed, 0 failed, 0 pending**. **View test details** jumps to the full log.
+For the interactive recommendation check, choose **ppr**, user **1**, set the
+example slider to **0.50**, and press **Recommend Top-10**: Fargo (1996) is first
+and mean training popularity is **228.40**. The slider starts at 0.85 for examples;
+saved final PR/PPR results keep validation-selected 0.50, and the three controlled
+settings remain fixed.
+
+`node week6/check-ui.cjs` checks held/delayed loading and ignored early clicks,
+loading failures, `file://` guidance, test feedback/navigation and that PPR
+example in Chromium. It writes no saved results and forbids training, batch
+evaluation and alpha selection.
+
 ## Local HW5 MF continuity and persistence
 
 The MF method is derived from `alina-05-matrix-factorization` commit
